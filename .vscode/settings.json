@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^Set-Location 'd:\\\\Documentos\\\\Work\\\\langgraph course'; python - <<'PY'\nfrom pathlib import Path\npath = Path\\('8_HITL\\.py'\\)\nfor i, line in enumerate\\(path\\.read_text\\(\\)\\.splitlines\\(\\), 1\\):\n    if any\\(tok in line for tok in \\('dotenv', 'init_chat_model', 'load_dotenv', 'langsmith', 'ChatOllama', 'RunnableConfig'\\)\\):\n        print\\(f'\\{i\\}: \\{line\\}'\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

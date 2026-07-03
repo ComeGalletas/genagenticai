@@ -1,0 +1,45 @@
+2026-07-02 19:44:01 [INFO] app.main: Agentic LangGraph API starting up — logs -> D:\Documentos\Work\langgraph course\agentic-langgraph-app\backend\logs\app.log
+2026-07-02 19:44:01 [INFO] watchfiles.main: 1 change detected
+2026-07-02 19:44:11 [INFO] app.main: Chat request — thread_id='2a80f08c-de34-488d-9cfa-1871754b6a4e' message='what do you know about the rtx 5080'
+2026-07-02 19:44:11 [INFO] app.graph: run_agent — thread_id='2a80f08c-de34-488d-9cfa-1871754b6a4e' message='what do you know about the rtx 5080'
+2026-07-02 19:44:14 [INFO] httpx: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-07-02 19:44:21 [INFO] app.graph: LLM requested tool call(s): ['static_google_search']
+2026-07-02 19:44:21 [INFO] httpx: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-07-02 19:44:28 [INFO] app.graph: LLM requested tool call(s): ['static_google_search']
+2026-07-02 19:44:28 [INFO] httpx: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-07-02 19:44:36 [INFO] app.graph: LLM requested tool call(s): ['static_google_search']
+2026-07-02 19:44:36 [INFO] httpx: HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-07-02 19:44:54 [INFO] app.graph: Graph finished in 43.44s — 12 message(s) in state
+2026-07-02 19:44:54 [INFO] app.main: Chat response in 43.44s — thread_id='2a80f08c-de34-488d-9cfa-1871754b6a4e'
+2026-07-02 19:49:11 [INFO] watchfiles.main: 2 changes detected
+2026-07-02 19:49:11 [INFO] watchfiles.main: 1 change detected
+2026-07-02 19:49:12 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 19:49:12 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 19:49:13 [INFO] app.main: Agentic LangGraph API starting up — logs -> D:\Documentos\Work\langgraph course\agentic-langgraph-app\backend\logs\app.log
+2026-07-02 19:50:02 [INFO] watchfiles.main: 2 changes detected
+2026-07-02 19:50:03 [INFO] watchfiles.main: 1 change detected
+2026-07-02 19:50:03 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 19:50:03 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 19:50:04 [INFO] app.main: Agentic LangGraph API starting up — logs -> D:\Documentos\Work\langgraph course\agentic-langgraph-app\backend\logs\app.log
+2026-07-02 19:59:56 [INFO] watchfiles.main: 1 change detected
+2026-07-02 19:59:57 [INFO] watchfiles.main: 1 change detected
+2026-07-02 19:59:58 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 20:02:48 [INFO] watchfiles.main: 1 change detected
+2026-07-02 20:02:48 [INFO] watchfiles.main: 1 change detected
+2026-07-02 20:02:58 [INFO] watchfiles.main: 2 changes detected
+2026-07-02 20:02:58 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 20:02:59 [INFO] watchfiles.main: 8 changes detected
+2026-07-02 20:03:00 [INFO] app.main: Agentic LangGraph API starting up — logs -> D:\Documentos\Work\langgraph course\agentic-langgraph-app\backend\logs\app.log
+2026-07-02 20:03:12 [INFO] watchfiles.main: 1 change detected
+2026-07-02 20:03:13 [INFO] watchfiles.main: 1 change detected
+2026-07-02 20:03:13 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 20:03:14 [INFO] app.main: Agentic LangGraph API starting up — logs -> D:\Documentos\Work\langgraph course\agentic-langgraph-app\backend\logs\app.log
+2026-07-02 20:03:26 [INFO] watchfiles.main: 1 change detected
+2026-07-02 20:03:27 [INFO] watchfiles.main: 1 change detected
+2026-07-02 20:03:27 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 20:03:29 [INFO] app.main: Agentic LangGraph API starting up — logs -> D:\Documentos\Work\langgraph course\agentic-langgraph-app\backend\logs\app.log
+2026-07-02 20:03:48 [INFO] watchfiles.main: 1 change detected
+2026-07-02 20:03:48 [INFO] watchfiles.main: 1 change detected
+2026-07-02 20:03:49 [INFO] watchfiles.main: 5 changes detected
+2026-07-02 20:03:50 [INFO] watchfiles.main: 3 changes detected
+2026-07-02 20:03:50 [INFO] app.main: Agentic LangGraph API starting up — logs -> D:\Documentos\Work\langgraph course\agentic-langgraph-app\backend\logs\app.log

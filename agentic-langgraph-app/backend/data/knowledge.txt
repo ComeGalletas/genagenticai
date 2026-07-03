@@ -1,0 +1,67 @@
+# LangGraph & Agentic AI Knowledge Base
+
+## What is LangGraph?
+LangGraph is a library built on top of LangChain that lets you build stateful, multi-actor
+applications powered by Large Language Models (LLMs). It models your application as a graph
+where each node is a function (or agent step) and edges define the flow of control between nodes.
+
+## Key LangGraph Concepts
+
+### State
+State is a TypedDict that holds all shared data flowing through the graph. Every node reads from
+and writes to the State. The `add_messages` annotation on the `messages` key means new messages
+are appended rather than overwriting the list, which is essential for chat history.
+
+### Nodes
+Nodes are Python functions that receive the current State and return a partial update to it.
+The `chatbot` node invokes the LLM with the current message list. The `tools` node executes
+any tool calls that the LLM requested.
+
+### Edges
+- `add_edge(A, B)` creates a fixed transition from node A to node B.
+- `add_conditional_edges(A, condition_fn)` lets the graph branch based on runtime output.
+- `tools_condition` is a built-in condition that routes to the `tools` node when the LLM
+  emits a tool call, or to END when it produces a final text response.
+
+### MemorySaver
+MemorySaver is a checkpointer that stores conversation state in memory (RAM). Each unique
+`thread_id` passed via `RunnableConfig` gets its own isolated history, enabling multi-session
+conversations without cross-contamination.
+
+## What is RAG?
+Retrieval-Augmented Generation (RAG) is a pattern where relevant documents are retrieved from
+a knowledge base and injected into the LLM prompt before generation. This gives the LLM access
+to specific, up-to-date information without retraining the model.
+
+### RAG Steps
+1. Index: Split documents into chunks and embed each chunk as a vector.
+2. Store: Save the vectors in a vector database (e.g., ChromaDB).
+3. Retrieve: At query time, embed the question and find the most similar chunks.
+4. Generate: Pass the retrieved chunks + the question to the LLM to produce an answer.
+
+## What is ChromaDB?
+ChromaDB is an open-source, local-first vector database. It stores document embeddings on disk
+(in a local folder) and supports fast cosine-similarity search. No external service or API key
+is required — it runs entirely on your machine.
+
+## What are Embeddings?
+Embeddings are numerical vector representations of text produced by an embedding model. Similar
+texts produce vectors that are close together in vector space. This allows similarity search: given
+a query, find the stored documents whose vectors are nearest to the query vector.
+
+## Ollama
+Ollama is a tool for running open-source LLMs locally on your machine. This project uses Ollama
+for both chat generation (llama3.1) and embeddings (nomic-embed-text). Ollama must be running
+in the background before starting the backend server.
+
+## FastAPI
+FastAPI is a modern Python web framework for building APIs. It uses Python type hints to
+automatically validate request/response bodies (via Pydantic) and generate OpenAPI docs at /docs.
+
+## Project Architecture
+- backend/app/main.py: FastAPI app, CORS, /api/chat endpoint.
+- backend/app/graph.py: LangGraph StateGraph with chatbot and tools nodes.
+- backend/app/tools.py: Tool definitions (static_google_search, knowledge_search).
+- backend/app/rag.py: ChromaDB vector store setup and document retrieval.
+- backend/data/knowledge.txt: The local knowledge file indexed by ChromaDB.
+- frontend/src/App.jsx: React chat UI that posts messages to the backend API.
