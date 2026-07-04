@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .graph import run_agent
+from .chroma_store import load_vectorstore
 from .schemas import ChatRequest, ChatResponse
 
 # ---------------------------------------------------------------------------
@@ -45,6 +46,10 @@ app = FastAPI(title="Agentic LangGraph API", version="0.1.0")
 @app.on_event("startup")
 async def on_startup() -> None:
     logger.info("Agentic LangGraph API starting up — logs -> %s", _LOG_DIR / "app.log")
+    try:
+        load_vectorstore()
+    except Exception as exc:
+        logger.error("Failed to initialise vector store on startup: %s", exc)
 
 # Allow local React dev server to call this API.
 app.add_middleware(
@@ -74,7 +79,24 @@ def chat(request: ChatRequest) -> ChatResponse:
         reply = run_agent(request.message, thread_id=request.thread_id)
         elapsed = time.perf_counter() - start
         logger.info("Chat response in %.2fs — thread_id=%r", elapsed, request.thread_id)
+        logger.debug("Chat response content: %r", reply[:120])
         return ChatResponse(reply=reply)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("Chat error — thread_id=%r: %s", request.thread_id, exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "rebuild":
+        from .chroma_store import rebuild_vectorstore
+        print("Rebuilding vector store from knowledge files…")
+        try:
+            rebuild_vectorstore()
+            print("Done — vector store rebuilt successfully.")
+        except Exception as exc:
+            print(f"Error: {exc}")
+            sys.exit(1)
+    else:
+        print("Usage: python -m app.main rebuild")
+        sys.exit(1)

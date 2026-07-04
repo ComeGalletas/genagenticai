@@ -190,3 +190,77 @@ Launch MSRP:
 - 16 GB model: $429 USD
 
 ---
+
+## Product: NVIDIA GeForce RTX 5060
+
+**Category:** GPU  
+**Manufacturer:** NVIDIA  
+**Aliases:** RTX 5060, GeForce RTX 5060
+
+### Overview
+
+The RTX 5060 is a mainstream graphics card in the Blackwell lineup, succeeding the RTX 4060. It targets budget-conscious gamers seeking solid 1080p performance with access to DLSS 4 and hardware ray tracing.
+
+### Specifications
+
+- Architecture: Blackwell
+- VRAM: 8 GB GDDR7
+- Memory Bus: 128-bit
+- CUDA Cores: 3840
+- TDP: 150 W
+- PCI Express: PCIe 5.0
+
+### Features
+
+- DLSS 4
+- Multi Frame Generation
+- Ray Tracing
+- NVIDIA Reflex 2
+- AV1 hardware encoder
+
+### Performance
+
+The RTX 5060 is designed for smooth 1080p gaming at high settings and capable 1440p gaming with DLSS enabled. A solid mainstream upgrade from the RTX 3060 / 4060 generation.
+
+### Pricing
+
+Launch MSRP: $299 USD
+
+---
+
+## Product: NVIDIA GeForce RTX 5050
+
+**Category:** GPU  
+**Manufacturer:** NVIDIA  
+**Aliases:** RTX 5050, GeForce RTX 5050
+
+### Overview
+
+The RTX 5050 is the entry-level desktop GPU in the Blackwell RTX 50 Series. It is aimed at budget builds and casual gamers who want modern features such as DLSS 4 and hardware-accelerated ray tracing at an accessible price point.
+
+### Specifications
+
+- Architecture: Blackwell
+- VRAM: 8 GB GDDR7
+- Memory Bus: 128-bit
+- CUDA Cores: 2560
+- TDP: 130 W
+- PCI Express: PCIe 5.0
+
+### Features
+
+- DLSS 4
+- Ray Tracing (hardware accelerated)
+- NVIDIA Reflex
+- AV1 hardware encoder/decoder
+- DisplayPort 2.1 / HDMI 2.1
+
+### Performance
+
+The RTX 5050 targets 1080p gaming at medium-to-high settings and provides a significant generational leap over the RTX 3050 / 4050 in rasterization and AI-assisted rendering thanks to DLSS 4 with Multi Frame Generation.
+
+### Pricing
+
+Launch MSRP: ~$249 USD
+
+---

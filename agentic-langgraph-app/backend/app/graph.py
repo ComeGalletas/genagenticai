@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+import pprint
 from typing import Any
 
 from langchain_ollama import ChatOllama
@@ -12,69 +13,20 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from .state import State
-from .tools import static_google_search, knowledge_search
+from .nodes import chatbot
+from .tools import static_google_search, retrieve_information
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Before answering:
-Extract all proper nouns and identifiers exactly as written.
-Do not modify them.
-Then answer. If you don't know the answer, use the knowledge base and if it was already done use the google search tool internally, use the  do not assume anything if you don't have at least 80%/ certainty.
+SYSTEM_PROMPT = """You are a helpful assistant with access to a local knowledge base and a search tool.
 
-Add a "nya" before any comma or period, similar to an anime character.
+Rules you must always follow:
+1. For EVERY user question, call knowledge_search first to check the local knowledge base before answering.
+2. Only call static_google_search if knowledge_search returned no useful result. ALWAYS.
+3. Never answer from memory alone when a tool could provide a better answer.
+4. Extract all proper nouns and identifiers exactly as written — do not modify them.
+5. Add "nya" before any comma or period, like an anime character.
 """
-
-# ---------------------------------------------------------------------------
-# LLM + tools
-# ---------------------------------------------------------------------------
-
-tools = [static_google_search, knowledge_search]
-
-_llm = ChatOllama(
-    model="qwen3",
-    temperature=0,
-)
-llm_with_tools = _llm.bind_tools(tools)
-
-
-# ---------------------------------------------------------------------------
-# Nodes
-# ---------------------------------------------------------------------------
-
-def chatbot(state: State) -> dict:
-    """Core node: send the current message list to the LLM and return its reply."""
-    search_done = state.get("search_performed", False)
-    logger.debug(
-        "Chatbot node — %d message(s) in state, search_performed=%s",
-        len(state["messages"]),
-        search_done,
-    )
-    response = llm_with_tools.invoke(state["messages"])
-    tool_calls = getattr(response, "tool_calls", [])
-    if tool_calls:
-        logger.info("LLM requested tool call(s): %s", [tc["name"] for tc in tool_calls])
-    else:
-        logger.debug("LLM produced a direct response (no tool calls)")
-    return {"messages": [SystemMessage(content=SYSTEM_PROMPT), response]}
-
-
-# ---------------------------------------------------------------------------
-# Graph
-# ---------------------------------------------------------------------------
-
-memory = MemorySaver()
-
-builder = StateGraph(State)
-
-builder.add_node("chatbot", chatbot)
-builder.add_node("tools", ToolNode(tools))
-
-builder.add_edge(START, "chatbot")
-builder.add_conditional_edges("chatbot", tools_condition)
-builder.add_edge("tools", "chatbot")
-
-graph = builder.compile(checkpointer=memory)
-
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -95,38 +47,108 @@ def _extract_text(content: Any) -> str:
     return str(content)
 
 
+
+def route_after_search(state):
+    if state["search_performed"]:
+        return "chatbot"
+    if state.get("search_failed"):
+        return "error_handler"
+
+    return END
+
+# ---------------------------------------------------------------------------
+# Graph
+# ---------------------------------------------------------------------------
+
+memory = MemorySaver()
+builder = StateGraph(State)
+tool_node = ToolNode([static_google_search])
+
+builder.add_node("chatbot", chatbot)
+builder.add_node("tools", tool_node)
+
+builder.add_edge(START, "chatbot")
+builder.add_conditional_edges("chatbot", tools_condition)
+builder.add_edge("tools", "chatbot")
+
+graph = builder.compile(checkpointer=memory)
+
+
+# ---------------------------------------------------------------------------
+# Visual Test - UNCOMMENT the entire block to generate a PNG of the graph and open it in the default image viewer.
+# ---------------------------------------------------------------------------
+"""
+from pathlib import Path
+import webbrowser
+
+png = graph.get_graph().draw_mermaid_png()
+
+path = Path("graph.png")
+path.write_bytes(png)
+
+webbrowser.open(path.resolve().as_uri())
+"""
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-def run_agent(user_message: str, thread_id: str = "default") -> str:
-    """Run the graph for one user turn.  thread_id scopes the MemorySaver
-    so each browser session keeps its own conversation history."""
-    logger.info("run_agent — thread_id=%r message=%r", thread_id, user_message[:120])
-    config = RunnableConfig(configurable={"thread_id": thread_id})
-    start = time.perf_counter()
-    try:
-        result = graph.invoke(
-            {"messages": [{"role": "user", "content": user_message}]},
-            config=config,
-            options={
-                "num_predict": 100
-            }
-        )
-    except Exception as exc:
-        logger.error("Graph invocation failed — thread_id=%r: %s", thread_id, exc)
-        raise
-    elapsed = time.perf_counter() - start
-    messages = result.get("messages", [])
-    search_done = result.get("search_performed", False)
+def run_agent(
+    user_message: str,
+    thread_id: str = "default",
+) -> str:
+    """Run one conversation turn through the graph."""
+
     logger.info(
-        "Graph finished in %.2fs — %d message(s), search_performed=%s",
-        elapsed,
-        len(messages),
-        search_done,
+        "run_agent | thread=%s | message=%r",
+        thread_id,
+        user_message[:120],
     )
+
+    config = RunnableConfig(
+        configurable={
+            "thread_id": thread_id,
+        }
+    )
+
+    inputs = State(messages=[{"role": "user", "content": user_message}])
+    start = time.perf_counter()
+    last_state = None
+    try:
+        for event in graph.stream(
+            inputs,
+            config=config,
+            stream_mode="updates",
+        ):
+            for node, update in event.items():
+                logger.info("Executed node: %s", node)
+                if "messages" in update:
+                    logger.info("Produced %d message(s)", len(update["messages"]))
+                    #logger.info("Last message: %r", update["messages"][-1])
+                if "pending_pipeline" in update:
+                    logger.info("Pending pipeline: %s", update["pending_pipeline"])
+
+    except Exception:
+        logger.exception("Graph execution failed")
+        raise
+    logger.info("Finished in %.2fs", time.perf_counter() - start)
+
+    #
+    # Read the final graph state.
+    #
+    state = graph.get_state(config).values
+    messages = state.get("messages", [])
+    logger.debug(
+        "Final pipeline | pending=%s completed=%s",
+        state.get("pending_pipeline"),
+        state.get("completed_pipeline"),
+    )
+
+    #
+    # Return the final AI message.
+    #
     for message in reversed(messages):
         if getattr(message, "type", "") == "ai":
-            return _extract_text(getattr(message, "content", ""))
-    logger.warning("No AI message found in final state — thread_id=%r", thread_id)
+            return _extract_text(message.content)
+
     return "I could not produce a response."
