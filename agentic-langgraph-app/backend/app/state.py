@@ -1,31 +1,11 @@
-from enum import StrEnum
-from dataclasses import dataclass, field
-from typing import Any, Annotated
+
+from typing import Annotated
 from typing_extensions import TypedDict, NotRequired
 
 from langgraph.graph.message import add_messages
 
-RETRIEVAL_PIPELINE = [
-    "static_search",
-    "rag_search",
-    "google_search",
-]
+from .retrieval.retrieval import RetrievalStage, RetrievalResult
 
-class RetrievalStage(StrEnum):
-    STATIC = "static_search"
-    RAG = "rag_search"
-    GOOGLE = "google_search"
-
-@dataclass(slots=True)
-class RetrievalResult:
-    title: str
-    content: str
-    source: str
-    stage: RetrievalStage
-    #status: str          # "FOUND", "NO_MATCH", "ERROR"
-    score: float |None = None
-    confidence: float | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]

@@ -1,5 +1,6 @@
 import logging
 from typing import Annotated, Dict
+from urllib import response
 
 from langchain_ollama import ChatOllama
 from langchain_core.messages import ToolMessage, SystemMessage
@@ -7,28 +8,24 @@ from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.types import Command
 from langgraph.graph import END
 
-from .rag import query_knowledge
 from .state import State
-from .tools import STATIC_RESULTS, format_results, static_to_results, ddu_google_search, static_google_search, retrieve_information
+from .searches.rag import query_knowledge
+from .searches.static_search import static_google_search, query_static_search
+from .searches.google_search import query_ddu_google_search
+from .tools import format_results, retrieve_information
 
 SYSTEM_PROMPT = """You are a helpful assistant with access to a local knowledge base and a search tool.
-    Rules you must always follow:
-    1. For EVERY user question, call knowledge_search first to check the local knowledge base before answering.
-    2. Only call static_google_search if knowledge_search returned no useful result. ALWAYS.
-    3. Never answer from memory alone when a tool could provide a better answer.
-    4. Extract all proper nouns and identifiers exactly as written — do not modify them.
-    5. If there are no tools or options available, answer the question to the best of your ability using your own knowledge.
-    6. Add "nya" before any comma or period, like an anime character.
+Add "nya" before any comma or period, like an anime character.
 """
 SYSTEM_MESSAGE = SystemMessage(content=SYSTEM_PROMPT)
 
 
 logger = logging.getLogger(__name__)
 
-tools = [static_google_search]
+tools = [static_google_search, retrieve_information]
 
 _llm = ChatOllama(
-    model="qwen3",
+    model="llama3.1",
     temperature=0,
 )
 llm_with_tools = _llm.bind_tools(tools)
@@ -60,32 +57,24 @@ def chatbot(state: State) -> Command:
 
         return Command(goto="tools", update={"messages": [response]})
 
+    logger.info("%r", response)
+    logger.info("%r", response.additional_kwargs)
+    logger.info("%r", response.response_metadata)
+    logger.info("%r", response.tool_calls)
     logger.info("LLM produced final response.")
     return Command(goto=END, update={"messages": [response]})
 
 
-def static_search(state: State, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+def static_search(state: State) -> Command:
+    """Search the static google search. """
     query = state.get("retrieval_query")
-    normalized = query.lower().strip() if query else ""
+    logger.info("Static search tool called — question: %r", str(query))
 
-    results: list[Dict[str, str]] = []    
-    for entry in STATIC_RESULTS:
-        keywords = entry["keywords"].split()
-        if any(word.lower() in normalized for word in keywords):
-            results.append({
-                "query": str(query),
-                "title": entry["title"],
-                "url": entry["url"],
-                "snippet": entry["snippet"],
-            })
-
-    retrieval_results = static_to_results(results)
-
+    retrieval_results = query_static_search(str(query))
     tool_message = format_results(query=str(query), results=retrieval_results)
-    return Command(update={"messages": [ToolMessage(content=tool_message, tool_call_id=tool_call_id)]})
+    return Command(update={"messages": [ToolMessage(content=tool_message)]})
 
-
-def rag_search(state: State, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+def rag_search(state: State) -> Command:
     """Search the local knowledge base. Use this tool for ANY question before answering.
     The knowledge base covers: NVIDIA RTX 50 series GPUs (RTX 5090, 5080, 5070 Ti, 5070,
     5060 Ti, 5060, 5050), their specs, features, performance, and pricing. Also covers
@@ -94,15 +83,15 @@ def rag_search(state: State, tool_call_id: Annotated[str, InjectedToolCallId]) -
     logger.info("Knowledge search tool called — question: %r", str(query))
 
     retrieval_results = query_knowledge(str(query))
-
     tool_message = format_results(query=str(query), results=retrieval_results)
-    return Command(update={"messages": [ToolMessage(content=tool_message, tool_call_id=tool_call_id)]})
+    return Command(update={"messages": [ToolMessage(content=tool_message)]})
 
-
-def google_duck_search(state: State, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+def google_duck_search(state: State) -> Command:
+    """Search Google through DuckDuckGo and return structured retrieval results."""
     query = state.get("retrieval_query")
+    logger.info("Google DuckDuckGo search tool called — question: %r", str(query))
 
-    results = ddu_google_search(str(query))
-
-    return Command(update={"messages": [ToolMessage(content=format_results(query=str(query), results=results), tool_call_id=tool_call_id)]})
+    retrieval_results = query_ddu_google_search(str(query))
+    tool_message = format_results(query=str(query), results=retrieval_results)
+    return Command(update={"messages": [ToolMessage(content=tool_message)]})
 

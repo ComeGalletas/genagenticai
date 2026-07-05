@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 
-from .chroma_store import get_vectorstore
-from .state import RetrievalResult, RetrievalStage
+from ..chroma_store import get_vectorstore
+from ..retrieval.retrieval import RetrievalStage, RetrievalResult
 
 logger = logging.getLogger(__name__)
 
