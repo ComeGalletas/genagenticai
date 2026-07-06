@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import Any, Hashable
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
@@ -10,9 +10,11 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from .state import State
-from .nodes import chatbot, rag_search
-from .searches.static_search import static_google_search
-from .tools import retrieve_information
+from .tools import retrieve_information, get_current_time
+from .nodes import chatbot, retrieve_information_node
+from .router import route_chatbot
+from ..searches.static_search import static_google_search
+from ..config import USE_RETRIEVAL_PIPELINE
 
 logger = logging.getLogger(__name__)
 
@@ -41,14 +43,36 @@ def _extract_text(content: Any) -> str:
 
 memory = MemorySaver()
 builder = StateGraph(State)
-tool_node = ToolNode([static_google_search, retrieve_information])
+# ToolNode only contains tools that should actually execute there.
+tool_node = ToolNode(
+    [static_google_search, get_current_time]
+    if USE_RETRIEVAL_PIPELINE
+    else [static_google_search, get_current_time, retrieve_information]
+)
 
 builder.add_node("chatbot", chatbot)
 builder.add_node("tools", tool_node)
+if USE_RETRIEVAL_PIPELINE:
+    builder.add_node(
+        "retrieve_information",
+        retrieve_information_node,
+    )
 
 builder.add_edge(START, "chatbot")
-builder.add_conditional_edges("chatbot", tools_condition)
+routes: dict[Hashable, str] = {
+    "tools": "tools",
+    END: END,
+}
+if USE_RETRIEVAL_PIPELINE:
+    routes["retrieve_information"] = "retrieve_information"
+builder.add_conditional_edges(
+    "chatbot",
+    route_chatbot,
+    routes,
+)
 builder.add_edge("tools", "chatbot")
+if USE_RETRIEVAL_PIPELINE:
+    builder.add_edge("retrieve_information", "chatbot")
 
 graph = builder.compile(checkpointer=memory)
 
@@ -56,8 +80,8 @@ graph = builder.compile(checkpointer=memory)
 # ---------------------------------------------------------------------------
 # Visual Test - UNCOMMENT the entire block to generate a PNG of the graph and open it in the default image viewer.
 # ---------------------------------------------------------------------------
-"""
-from pathlib import Path
+
+"""from pathlib import Path
 import webbrowser
 
 png = graph.get_graph().draw_mermaid_png()

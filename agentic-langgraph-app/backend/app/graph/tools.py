@@ -4,14 +4,16 @@ import logging
 import json
 from dataclasses import asdict
 from typing import Annotated
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.types import Command
 
-from .retrieval.retrieval import RetrievalResult
-from .retrieval.retrieval_config import RETRIEVAL_PIPELINE
-from .retrieval.retrieval_engine import RetrievalEngine
+from ..retrieval.retrieval import RetrievalResult
+from ..retrieval.retrieval_config import RETRIEVAL_PIPELINE
+from ..retrieval.retrieval_engine import RetrievalEngine
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,11 @@ def format_results(query: str, results: list[RetrievalResult]) -> str:
 
 @tool
 def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
-    """Retrieve information from the retrieval pipeline and return structured results."""
+    """Retrieves information from a knowledge base and web search functions. It includes a knowledge base and web search functions.
+        It is a very very slow tool that may take a few seconds to return results, but it is very comprehensive and it is updated.
+        Use it if you need to know the answer to a question that requires external knowledge or recent information.
+    """
+    logger.info("retrieve_information TOOL called")
     results = retrieval_engine.run_pipeline(query)
     formatted = format_results(
         query=query,
@@ -68,4 +74,18 @@ def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCa
                 )
             ]
         }
+    )
+
+@tool
+def get_current_time() -> str:
+    """Return the current local date, time, and timezone of the machine running the application.
+        Use it if you need to know the current date and time for any reason or queries.
+    """
+
+    now = datetime.now().astimezone()
+
+    return (
+        f"Date: {now:%Y-%m-%d}\n"
+        f"Time: {now:%H:%M:%S}\n"
+        f"Timezone: {now.tzname()}"
     )

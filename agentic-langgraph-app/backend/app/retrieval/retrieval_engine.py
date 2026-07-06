@@ -66,4 +66,4 @@ class RetrievalEngine:
         Decide whether retrieval should stop.
         Replace this with whatever heuristic you like.
         """
-        return len(results) >= 3
+        return len(results) >= 5

@@ -5,12 +5,14 @@ import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
-from .graph import run_agent
-from .chroma_store import load_vectorstore
-from .schemas import ChatRequest, ChatResponse
+
+from .graph.graph import run_agent
+from .db.chroma_store import load_vectorstore
+from .server.schemas import ChatRequest, ChatResponse
 
 # ---------------------------------------------------------------------------
 # Logging setup — console + rotating file
@@ -39,18 +41,26 @@ logging.basicConfig(level=logging.INFO, handlers=[_file_handler, _console_handle
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# FastAPI app setup
+# ---------------------------------------------------------------------------
 
-app = FastAPI(title="Agentic LangGraph API", version="0.1.0")
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan. Loads the vector store on startup and handles shutdown."""
     logger.info("Agentic LangGraph API starting up — logs -> %s", _LOG_DIR / "app.log")
+
     try:
         load_vectorstore()
     except Exception as exc:
         logger.error("Failed to initialise vector store on startup: %s", exc)
+        # raise
+    # Startup is complete
+    yield
+    # Shutdown logic goes here
+    logger.info("Agentic LangGraph API shutting down")
 
+app = FastAPI(title="Agentic LangGraph API", version="0.1.0", lifespan=lifespan)
 # Allow local React dev server to call this API.
 app.add_middleware(
     CORSMiddleware,
@@ -60,15 +70,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/health")
 def health() -> dict[str, str]:
+    """Health check endpoint: returns a simple status message."""
     logger.debug("Health check requested")
     return {"status": "ok"}
 
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
+    """
+        Main chat endpoint: receives a message, invokes the agent, and returns the reply.
+    """
     logger.info(
         "Chat request — thread_id=%r message=%r",
         request.thread_id,
@@ -85,11 +98,15 @@ def chat(request: ChatRequest) -> ChatResponse:
         logger.error("Chat error — thread_id=%r: %s", request.thread_id, exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+# ---------------------------------------------------------------------------
 
+"""
+    Main entry point for the vector store outside the agentic AI app. Rebuilds when starting the app as a python app with the 'rebuild' argument.
+"""
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "rebuild":
-        from .chroma_store import rebuild_vectorstore
+        from .db.chroma_store import rebuild_vectorstore
         print("Rebuilding vector store from knowledge files…")
         try:
             rebuild_vectorstore()

@@ -4,6 +4,11 @@ from ddgs import DDGS
 from ..retrieval.retrieval import RetrievalResult, RetrievalStage
 
 logger = logging.getLogger(__name__)
+logging.getLogger("primp").setLevel(logging.WARNING)
+
+# ---------------------------------------------------------------------------
+# Functions
+# ---------------------------------------------------------------------------
 
 def google_to_results(google_results) -> list[RetrievalResult]:
     retrieval_results = []
@@ -19,8 +24,7 @@ def google_to_results(google_results) -> list[RetrievalResult]:
     return retrieval_results
 
 
-
-def query_ddu_google_search(query: str, max_results: int = 10) -> list[RetrievalResult]:
+def query_ddu_google_search(query: str, max_results: int = 5) -> list[RetrievalResult]:
     """
     Search DuckDuckGo and return structured retrieval results.
     """

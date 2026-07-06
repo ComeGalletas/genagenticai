@@ -10,7 +10,7 @@ from langchain_chroma import Chroma
 
 logger = logging.getLogger(__name__)
 
-_DATA_DIR = Path(__file__).parent.parent / "data"
+_DATA_DIR = Path(__file__).parent.parent.parent / "data"
 _CHROMA_DIR = _DATA_DIR / "chroma_db"
 _KNOWLEDGE_DIR = _DATA_DIR / "knowledge"
 

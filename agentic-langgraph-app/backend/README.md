@@ -18,6 +18,8 @@ Add your `GOOGLE_API_KEY` to `.env`.
 ```bash
 uvicorn app.main:app --reload --reload-dir app --port 8000
 
+uvicorn app.main:app --reload --reload-dir app --port 8000 --log-level debug
+
 python -m app.main rebuild
 ```
 Test at `http://localhost:8000/health`.

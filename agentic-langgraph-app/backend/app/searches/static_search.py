@@ -38,26 +38,14 @@ STATIC_RESULTS: List[Dict[str, str]] = [
     },
 ]
 
-
-def static_to_results(matches) -> list[RetrievalResult]:
-    retrieval_results = []
-    for match in matches:
-        retrieval_results.append(
-            RetrievalResult(
-                title=match["title"],
-                content=match["snippet"],
-                source=match["url"],
-                stage=RetrievalStage.STATIC,
-                score=1.0,
-            )
-        )
-    return retrieval_results
-
+# ---------------------------------------------------------------------------
+# Functions
+# ---------------------------------------------------------------------------
 
 
 def query_static_search(query: str) -> list[RetrievalResult]:
     normalized = query.lower().strip() if query else ""
-
+    logger.debug("Google static search tool called — query: %r", normalized)
     results: list[Dict[str, str]] = []    
     for entry in STATIC_RESULTS:
         keywords = entry["keywords"].split()
@@ -81,35 +69,28 @@ def query_static_search(query: str) -> list[RetrievalResult]:
                 confidence=None,
             )
         )
+    
+    if not results:
+        logger.info("No static entry found for %r — Search results were insufficient to answer the question.", normalized)
+        return [RetrievalResult(
+                title="No relevant information found",
+                content="No relevant information was found to answer the user's question.",
+                source="",
+                stage=RetrievalStage.STATIC,
+                score=None,
+                confidence=None,
+            )]
+    else:
+        logger.info("Static entry found for %r: %r", normalized, results[0]["title"])
 
     return retrieval_results
 
 @tool
 def static_google_search(query: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
-    """Return the first Google result for a query.
-    It uses an internal database to retrieve and store results, so it does not make any external network requests."""
-    normalized = query.lower().strip()
-    logger.info("Google static search tool called — query: %r", normalized)
-    results: list[Dict[str, str]] = []    
-    for entry in STATIC_RESULTS:
-        keywords = entry["keywords"].split()
-        if any(word.lower() in normalized for word in keywords):
-            results.append({
-                "query": query,
-                "title": entry["title"],
-                "url": entry["url"],
-                "snippet": entry["snippet"],
-            })
-
-    if not results:
-        logger.info("No static entry found for %r — using fallback URL", normalized)
-        results = [{
-            "query": query,
-            "title": "No static indexed result found",
-            "url": f"https://www.google.com/search?q={query.replace(' ', '+')}",
-            "snippet": "Fallback generated search URL. Add more STATIC_RESULTS to improve matches.",
-        }]
-    else:
-        logger.info("Static entry found for %r: %r", normalized, results[0]["title"])
+    """ Returns a fixed set of results for certain queries, without making external network requests. 
+        It is fast to access but it has very few data and it is not updated. 
+        Use it if you need to know the answer to a question that requires external knowledge or recent information.
+    """
+    results = query_static_search(str(query))
 
     return Command(update={"messages": [ToolMessage(content=str(results), tool_call_id=tool_call_id)]})

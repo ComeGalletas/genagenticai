@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 
-from ..chroma_store import get_vectorstore
+from .chroma_store import get_vectorstore
 from ..retrieval.retrieval import RetrievalStage, RetrievalResult
 
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 K_VALUE = 3
-SCORE_THRESHOLD = 0.75
+SCORE_THRESHOLD = 0.45
 
 def query_knowledge(question: str, k: int = K_VALUE, score_threshold: float = SCORE_THRESHOLD) -> list[RetrievalResult]:
     """Return relevant passages from the local vector store."""
@@ -20,7 +21,9 @@ def query_knowledge(question: str, k: int = K_VALUE, score_threshold: float = SC
         return []
 
     try:
+        logger.debug("Similarity search question: %r (k=%d, threshold=%.2f)", question, k, score_threshold)
         results = vs.similarity_search_with_relevance_scores(question, k=k)
+        logger.debug("Similarity search raw results: %d doc(s) returned", len(results))
         #results = vs.similarity_search(question, k=k)
     except Exception:
         logger.exception("Similarity search failed")
