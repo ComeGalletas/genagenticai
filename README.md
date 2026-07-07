@@ -8,33 +8,29 @@ A learning-focused agentic AI workspace built with **LangGraph**, **FastAPI**, a
 
 The graph routes between these tools automatically, making it a good hands-on example of agentic decision-making without relying on paid cloud LLMs.
 
-## Repository structure
+## Project structure
 
-```
-agentic-langgraph-app/   ← main app (backend + frontend)
-langgraph-course/        ← Jupyter notebooks & crash course material
-```
-
----
+- `backend/`: FastAPI + LangGraph agent
+- `frontend/`: React chat client
 
 ## Agentic LangGraph App
 
 ### Prerequisites
 
-- [Ollama](https://ollama.com/) running locally with `llama3.1` (or `qwen3`) pulled
-- Python 3.11+
+- [Ollama](https://ollama.com/) running locally with `llama3.1` (or `qwen3.6`) pulled
+- Python 3.12+
 - Node.js 18+
-- A `GOOGLE_API_KEY` for the Google Search fallback
 
 ### Backend setup & run
 
 ```bash
-cd agentic-langgraph-app/backend
+cd backend
 python -m venv .venv
-.venv\Scripts\activate
+
+.venv\Scripts\activate # Optional
+
 pip install -e .
-copy .env.example .env
-# add GOOGLE_API_KEY to .env
+#copy .env.example .env
 ```
 
 Start the server:
@@ -54,7 +50,7 @@ Health check: `http://localhost:8000/health`
 ### Frontend setup & run
 
 ```bash
-cd agentic-langgraph-app/frontend
+cd frontend
 npm install
 npm run dev
 ```
@@ -64,42 +60,3 @@ Override with `VITE_API_BASE_URL` in a `.env` file if needed.
 
 ---
 
-## Agent graph flow
-
-```
-START
-  │
-  ▼
-chatbot ──── no tool needed ──► END
-  │
-  ▼ (tool call)
-tools
-  │
-  ▼
-chatbot ──── no Google needed ──► END
-  │
-  ▼ (Google requested)
-search already done? ── yes ──► chatbot ──► END
-  │ no
-  ▼
-google_search
-  │
-  ▼
-chatbot ──► END
-```
-
----
-
-## LangGraph Course
-
-Jupyter notebooks covering LangGraph fundamentals.
-
-### Setup
-
-```bash
-cd langgraph-course
-# rename sample.env to .env and add your keys
-cp sample.env .env
-```
-
-Install dependencies with `uv` or `pip` as described in the course notebooks.

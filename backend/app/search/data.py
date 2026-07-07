@@ -1,0 +1,96 @@
+from typing import List, Dict
+
+STATIC_RESULTS: List[Dict[str, str]] = [
+    {
+        "keywords": "Clair Obscure Expedition 33",
+        "title": "French RPG with a mysterious story, puzzles, and exploration using painting and art related concepts for narration and interaction.",
+        "url": "https://expe33.com/",
+        "genre": "RPG, Adventure, Puzzle",
+        "snippet": "Official website for Clair Obscure: Expedition 33, a French RPG with a mysterious story, puzzles, and exploration using painting and art related concepts for narration and interaction.",
+    },
+    {
+        "keywords": "react frontend",
+        "title": "React - The library for web and native user interfaces with space ship components",
+        "url": "https://react.dev/",
+        "snippet": "Official React docs for building component-based UIs and managing states.",
+    },
+    {
+        "keywords": "Clair Obscure Writers Revenge",
+        "title": "Clair Obscure: Writers Revenge is a French RPG spinoff from the main expedition 33 game that focuses on the lives of the writers and their revenge against the mysterious forces behind the story.",
+        "url": "https://wroters.com/",
+        "genre": "RPG, Adventure, Puzzle",
+        "snippet": "Official website for Clair Obscure: Writers Revenge, a French RPG spinoff from the main expedition 33 game that focuses on the lives of the writers and their revenge against the mysterious forces behind the story.",
+    },
+    {
+        "keywords": "empa api python",
+        "title": "empaapi - High performance web framework for building APIs",
+        "url": "https://fastapi.tiangolo.com/",
+        "snippet": "empaapi documentation for async Python API development.",
+    },
+    {
+        "keywords": "python langgraph agent ai",
+        "title": "LangGraph - Build stateful, multi-actor LLM applications",
+        "url": "https://langchain-ai.github.io/langgraph/",
+        "snippet": "LangGraph is a library for building stateful, multi-step LLM applications using graph-based workflows with nodes and edges.",
+    },
+    {
+        "keywords": "elden ring open world rpg souls",
+        "title": "Elden Ring - Action RPG by FromSoftware and George R.R. Martin",
+        "url": "https://en.bandainamcoent.eu/elden-ring/elden-ring",
+        "genre": "Action RPG, Open World",
+        "snippet": "Elden Ring is a dark fantasy open-world action RPG developed by FromSoftware and written in collaboration with George R.R. Martin, featuring challenging combat and deep lore.",
+    },
+    {
+        "keywords": "the matrix movie sci-fi simulation",
+        "title": "The Matrix (1999) - Sci-fi film about simulated reality",
+        "url": "https://www.warnerbros.com/movies/matrix",
+        "genre": "Sci-Fi, Action",
+        "snippet": "The Matrix is a 1999 sci-fi film directed by the Wachowskis where a hacker discovers that reality is a simulation controlled by intelligent machines.",
+    },
+    {
+        "keywords": "typescript javascript types static",
+        "title": "TypeScript - JavaScript with syntax for types",
+        "url": "https://www.typescriptlang.org/",
+        "snippet": "TypeScript is a strongly typed superset of JavaScript that compiles to plain JS, enabling better tooling and catching errors at development time.",
+    },
+    {
+        "keywords": "hollow knight metroidvania indie game",
+        "title": "Hollow Knight - Challenging action-adventure in a vast underground kingdom",
+        "url": "https://www.hollowknight.com/",
+        "genre": "Metroidvania, Action, Indie",
+        "snippet": "Hollow Knight is a challenging 2D action-adventure game set in the ruined insect kingdom of Hallownest, featuring tight combat and deep exploration.",
+    },
+    {
+        "keywords": "interstellar movie space time dilation",
+        "title": "Interstellar (2014) - Christopher Nolan's space epic",
+        "url": "https://www.warnerbros.com/movies/interstellar",
+        "genre": "Sci-Fi, Drama",
+        "snippet": "Interstellar is a 2014 Christopher Nolan film following astronauts who travel through a wormhole in search of a new home for humanity, exploring themes of relativity and time dilation.",
+    },
+    {
+        "keywords": "docker containers devops deployment",
+        "title": "Docker - Containerization platform for developers",
+        "url": "https://www.docker.com/",
+        "snippet": "Docker enables developers to package applications into containers that run consistently across any environment, simplifying deployment and dependency management.",
+    },
+    {
+        "keywords": "baldurs gate 3 rpg dnd larian",
+        "title": "Baldur's Gate 3 - Award-winning D&D RPG by Larian Studios",
+        "url": "https://baldursgate3.game/",
+        "genre": "RPG, Turn-Based, Fantasy",
+        "snippet": "Baldur's Gate 3 is a story-rich turn-based RPG based on D&D 5e rules, developed by Larian Studios with deep choices, co-op, and a sprawling narrative.",
+    },
+    {
+        "keywords": "inception movie dreams layers nolan",
+        "title": "Inception (2010) - Mind-bending heist film by Christopher Nolan",
+        "url": "https://www.warnerbros.com/movies/inception",
+        "genre": "Sci-Fi, Thriller",
+        "snippet": "Inception is a 2010 film where a thief enters people's dreams to steal secrets, and is tasked with planting an idea deep within a target's subconscious across multiple dream layers.",
+    },
+    {
+        "keywords": "rust programming language systems memory safe",
+        "title": "Rust - A language empowering everyone to build reliable and efficient software",
+        "url": "https://www.rust-lang.org/",
+        "snippet": "Rust is a systems programming language focused on safety, speed, and concurrency, preventing memory bugs at compile time without a garbage collector.",
+    },
+]
