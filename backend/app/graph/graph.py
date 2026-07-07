@@ -10,7 +10,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from .state import State
-from .tools import retrieve_information, get_current_time, static_google_search
+from .tools import retrieve_information, get_current_time, read_webpage, static_google_search, retrieve_job_postings
 from .nodes import chatbot, retrieve_information_node, finish_retrieval_node
 from .router import route_chatbot, retrieval_router
 
@@ -40,13 +40,13 @@ def _extract_text(content: Any) -> str:
 # Graph
 # ---------------------------------------------------------------------------
 
-# Use USE_RETRIEVAL_PIPELINE_TOOL to switch between using the retrieval pipeline tool or not. If set to False, the retrieve_information_node will be used directly. 
+# Use USE_RETRIEVAL_PIPELINE_TOOL to switch between using the retrieval pipeline tool or not. If set to False, the retrieve_information_node will be used instead. 
 memory = MemorySaver()
 builder = StateGraph(State)
 if USE_RETRIEVAL_PIPELINE_TOOL:
-    tool_node = ToolNode([static_google_search, get_current_time, retrieve_information])
+    tool_node = ToolNode([static_google_search, get_current_time, read_webpage, retrieve_information, retrieve_job_postings])
 else:
-    tool_node = ToolNode([static_google_search, get_current_time])
+    tool_node = ToolNode([static_google_search, get_current_time, read_webpage, retrieve_job_postings])
 # ---------------------------------------------------------------------------
 # Nodes ---------------------------------------------------------------------
 # ---------------------------------------------------------------------------
@@ -75,6 +75,7 @@ graph = builder.compile(checkpointer=memory)
 # ---------------------------------------------------------------------------
 # Visual Test - generates a PNG of the graph and opens it in the default image viewer.
 # ---------------------------------------------------------------------------
+"""
 from pathlib import Path
 import webbrowser
 
@@ -83,9 +84,8 @@ png = graph.get_graph().draw_mermaid_png()
 path = Path("graph.png")
 path.write_bytes(png)
 
-#webbrowser.open(path.resolve().as_uri())
-
-
+webbrowser.open(path.resolve().as_uri())
+"""
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------

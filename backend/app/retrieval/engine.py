@@ -2,7 +2,7 @@
 import logging
 from typing import Callable
 
-from .retrieval_schemas import RetrievalResult
+from .schemas import RetrievalResult
 
 logger = logging.getLogger(__name__)
 

@@ -6,13 +6,16 @@ from dataclasses import asdict
 from typing import Annotated
 from datetime import datetime
 
+import trafilatura
+from trafilatura import fetch_url
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.types import Command
 
 from ..search.static import query_static_search
-from ..retrieval.retrieval_service import retrieval_engine
-from ..retrieval.retrieval_schemas import RetrievalResult
+from ..search.linkedin import get_recent_jobs
+from ..retrieval.service import retrieval_engine
+from ..retrieval.schemas import RetrievalResult
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +62,22 @@ def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCa
 
     return Command(update={"messages": [ToolMessage(content=formatted, tool_call_id=tool_call_id)]})
 
+@tool
+def retrieve_job_postings(query: str, location: str, remote_job: bool, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+    """ Retrieves job postings from LinkedIn. Use it if you need to search for recent job postings. It returns the last 10 job postings for the given query, location, and remote status.
+        It is a slow tool that may take a few seconds to return results, but it is very comprehensive and it is updated.
+        Consider data could be incomplete or missing, specially location.
+        Limit is set to the last seven days or data.
+        Location must include country, city is optional. For example: "France, Paris", "Chile" or "United States, New York".
+        Use remote_job=True to filter for remote jobs only.
+        
+    """
+    logger.info("Retrieve_job_postings tool called")
+
+    jobs = get_recent_jobs(keyword=query, location=location, remote=remote_job)
+    formatted = json.dumps(jobs, indent=2, ensure_ascii=False)
+
+    return Command(update={"messages": [ToolMessage(content=formatted, tool_call_id=tool_call_id)]})
 
 @tool
 def get_current_time(tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
@@ -66,16 +85,38 @@ def get_current_time(tool_call_id: Annotated[str, InjectedToolCallId]) -> Comman
         Use it if you need to know the current date and time for any reason or queries.
     """
     logger.info("Get_current_time tool called")
-    now = datetime.now().astimezone()
 
+    now = datetime.now().astimezone()
     result = {
-        f"Date: {now:%Y-%m-%d}\n"
-        f"Time: {now:%H:%M:%S}\n"
-        f"Timezone: {now.tzname()}"
+        "Date": f"{now:%Y-%m-%d}",
+        "Time": f"{now:%H:%M:%S}",
+        "Timezone": now.tzname()
     }
 
     return Command(update={"messages": [ToolMessage(content=str(result), tool_call_id=tool_call_id)]})
 
+@tool
+def read_webpage(url: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+    """ Returns clean markdown/text from any webpage.
+        Use it if you need to know the content of a webpage for any reason or queries.
+        It returns plenty of data so use it for specific urls not for general search.
+    """
+    logger.info("read_webpage tool called for url: %s", url)
+
+    downloaded = fetch_url(url)
+    result = None
+    if not downloaded:
+        result = "Failed to fetch page"        
+
+    result = trafilatura.extract(
+        downloaded,
+        include_formatting=True, 
+        include_links=True,
+        include_images=False,
+        output_format="markdown"
+    )
+
+    return Command(update={"messages": [ToolMessage(content=str(result if result else "No content extracted"), tool_call_id=tool_call_id)]})
 
 @tool
 def static_google_search(query: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:

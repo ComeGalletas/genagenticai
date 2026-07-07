@@ -4,20 +4,19 @@ import time
 from langchain_ollama import ChatOllama
 from langchain_core.messages import ToolMessage, SystemMessage
 from langgraph.types import Command
-from langgraph.graph import END
 
 from .state import State
-from .tools import retrieval_engine, format_results, retrieve_information, get_current_time, static_google_search
+from .tools import retrieval_engine, format_results, retrieve_information, get_current_time, read_webpage, static_google_search, retrieve_job_postings
 
 from .system_prompt import SYSTEM_PROMPT
 SYSTEM_MESSAGE = SystemMessage(content=SYSTEM_PROMPT)
 
 logger = logging.getLogger(__name__)
-tools = [static_google_search, get_current_time, retrieve_information]
+tools = [static_google_search, get_current_time, read_webpage, retrieve_information, retrieve_job_postings]
 
 _llm = ChatOllama(
-    model="llama3.1",
-    temperature=0,
+    model="qwen3",
+    temperature=0.1,
 )
 llm_with_tools = _llm.bind_tools(tools)
 
@@ -55,7 +54,6 @@ def retrieve_information_node(state: State):
 
         stage = 0
         accumulated_results = []
-
     # Returning from a previous stage
     else:
         query = state.get("retrieval_query")

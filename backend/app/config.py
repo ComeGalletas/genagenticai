@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-USE_RETRIEVAL_PIPELINE_TOOL = False  # If True it will use the retrieval pipeline as a tool. Set to False to use it as a node.
+USE_RETRIEVAL_PIPELINE_TOOL = True  # If True it will use the retrieval pipeline as a tool. Set to False to use it as a node.
 
 @dataclass(frozen=True)
 class Settings:

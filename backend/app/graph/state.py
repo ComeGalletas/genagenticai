@@ -4,7 +4,7 @@ from typing_extensions import TypedDict, NotRequired
 
 from langgraph.graph.message import add_messages
 
-from ..retrieval.retrieval_schemas import RetrievalResult
+from ..retrieval.schemas import RetrievalResult
 
 
 class State(TypedDict):

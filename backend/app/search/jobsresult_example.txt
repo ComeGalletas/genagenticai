@@ -1,0 +1,15 @@
+Linkedin - Finished Scraping
+[10 rows x 34 columns]
+
+| #  | ID            | Title                                                  | Company    | Job URL                                               | skills | experience_range | company_rating | company_reviews_count | vacancy_count | work_from_home_type |
+|----|---------------|--------------------------------------------------------|------------|-------------------------------------------------------|--------|------------------|----------------|-----------------------|---------------|---------------------|
+|  0 | li-4368080490 | Software Engineer Associate                            | Scotiabank | https://www.linkedin.com/jobs/view/4368080490         | None   | None             | None           | None                  | None          | None                |
+|  1 | li-4387739357 | Software Engineer Associate                            | Scotiabank | https://www.linkedin.com/jobs/view/4387739357         | None   | None             | None           | None                  | None          | None                |
+|  2 | li-4435370213 | Software Engineer (AI Training)                        | Alignerr   | https://www.linkedin.com/jobs/view/4435370213         | None   | None             | None           | None                  | None          | None                |
+|  3 | li-4435359882 | Software Engineer (AI Training)                        | Alignerr   | https://www.linkedin.com/jobs/view/4435359882         | None   | None             | None           | None                  | None          | None                |
+|  4 | li-4436278432 | Backend Software Engineer                              | Grip       | https://www.linkedin.com/jobs/view/4436278432         | None   | None             | None           | None                  | None          | None                |
+|  5 | li-4437797067 | Junior Software Engineer – Remote                      | Hire Feed  | https://www.linkedin.com/jobs/view/4437797067         | None   | None             | None           | None                  | None          | None                |
+|  6 | li-4437791518 | Junior Software Engineer (Remote)                      | Hire Feed  | https://www.linkedin.com/jobs/view/4437791518         | None   | None             | None           | None                  | None          | None                |
+|  7 | li-4437796772 | Home Assistant Python Developer for Hardware (...)     | Nabu Casa  | https://www.linkedin.com/jobs/view/4437796772         | None   | None             | None           | None                  | None          | None                |
+|  8 | li-4437790125 | Junior Software Engineer (Remote)                      | Hire Feed  | https://www.linkedin.com/jobs/view/4437790125         | None   | None             | None           | None                  | None          | None                |
+|  9 | li-4437776588 | Junior Software Engineer – Remote                      | Hire Feed  | https://www.linkedin.com/jobs/view/4437776588         | None   | None             | None           | None                  | None          | None                |

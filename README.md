@@ -5,6 +5,7 @@ A learning-focused agentic AI workspace built with **LangGraph**, **FastAPI**, a
 - **RAG (ChromaDB)** — searches a local vector knowledge base using Ollama embeddings
 - **Static search** — returns deterministic results from a curated in-code index
 - **Google Search** — falls back to a live Google API query when local knowledge is insufficient
+- **Job Posting Search** — searches LinkedIn for recent job postings using user queries, location and remote options
 
 The graph routes between these tools automatically, making it a good hands-on example of agentic decision-making without relying on paid cloud LLMs.
 

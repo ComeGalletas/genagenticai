@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from .chroma_store import get_vectorstore
-from ..retrieval.retrieval_schemas import RetrievalStage, RetrievalResult
+from ..retrieval.schemas import RetrievalStage, RetrievalResult
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
