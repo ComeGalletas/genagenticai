@@ -1,7 +1,7 @@
 [project]
 name = "agentic-langgraph-backend"
 version = "0.1.0"
-description = "Minimal LangGraph backend with one static Google-search tool"
+description = "Minimal LangGraph backend with different search tools"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -15,7 +15,8 @@ dependencies = [
     "langchain-ollama>=0.2.0",
     "chromadb>=0.5.0",
     "python-dotenv>=1.1.0",
-    "duckduckgo-search"
+    "duckduckgo-search",
+    "python-jobspy>=1.1.80"
 ]
 
 [build-system]
