@@ -11,10 +11,11 @@ from langgraph.prebuilt import ToolNode, tools_condition
 
 from .state import State
 from .tools import retrieve_information, get_current_time, read_webpage, static_google_search, retrieve_job_postings
-from .nodes import chatbot, retrieve_information_node, finish_retrieval_node
+from .nodes import chatbot
+from ..retrieval.nodes import retrieve_information_node, finish_retrieval_node
 from .router import route_chatbot, retrieval_router
 
-from ..config import USE_RETRIEVAL_PIPELINE_TOOL
+from ...config import USE_RETRIEVAL_PIPELINE_TOOL
 
 logger = logging.getLogger(__name__)
 
@@ -37,14 +38,22 @@ def _extract_text(content: Any) -> str:
     return str(content)
 
 # ---------------------------------------------------------------------------
-# Graph
+# Graphs
+# ---------------------------------------------------------------------------
+
+# CV Analysis Subgraph
+#cv_builder = StateGraph(CVAnalysisState)
+
+
+# ---------------------------------------------------------------------------
+# Main Graph Construction
 # ---------------------------------------------------------------------------
 
 # Use USE_RETRIEVAL_PIPELINE_TOOL to switch between using the retrieval pipeline tool or not. If set to False, the retrieve_information_node will be used instead. 
 memory = MemorySaver()
 builder = StateGraph(State)
 if USE_RETRIEVAL_PIPELINE_TOOL:
-    tool_node = ToolNode([static_google_search, get_current_time, read_webpage, retrieve_information, retrieve_job_postings])
+    tool_node = ToolNode([get_current_time, read_webpage, retrieve_information, retrieve_job_postings])
 else:
     tool_node = ToolNode([static_google_search, get_current_time, read_webpage, retrieve_job_postings])
 # ---------------------------------------------------------------------------
@@ -52,6 +61,7 @@ else:
 # ---------------------------------------------------------------------------
 builder.add_node("chatbot", chatbot)
 builder.add_node("tools", tool_node)
+#builder.add_node("cv_analysis", cv_analysis_node)
 if not USE_RETRIEVAL_PIPELINE_TOOL:
     builder.add_node("retrieve_information", retrieve_information_node)
     builder.add_node("finish_retrieval", finish_retrieval_node)
@@ -60,6 +70,7 @@ if not USE_RETRIEVAL_PIPELINE_TOOL:
 # ---------------------------------------------------------------------------
 builder.add_edge(START, "chatbot")
 builder.add_edge("tools", "chatbot")
+#builder.add_edge("cv_analysis", "chatbot")
 # ---------------------------------------------------------------------------
 if USE_RETRIEVAL_PIPELINE_TOOL:
     builder.add_conditional_edges("chatbot", tools_condition)
@@ -71,6 +82,8 @@ else:
 # ---------------------------------------------------------------------------
 
 graph = builder.compile(checkpointer=memory)
+
+
 
 # ---------------------------------------------------------------------------
 # Visual Test - generates a PNG of the graph and opens it in the default image viewer.

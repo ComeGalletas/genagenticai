@@ -6,6 +6,7 @@ from pathlib import Path
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,9 @@ CHUNK_SIZE = 400
 CHUNK_OVERLAP = 60
 
 _embeddings = OllamaEmbeddings(model="nomic-embed-text")
+#_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")  # TODO: make this configurable
 _vectorstore: Chroma | None = None
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers

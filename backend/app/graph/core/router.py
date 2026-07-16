@@ -1,9 +1,8 @@
 from langgraph.graph import END
-from langgraph.prebuilt import ToolNode, tools_condition
 
-from ..config import USE_RETRIEVAL_PIPELINE_TOOL
+from ...config import USE_RETRIEVAL_PIPELINE_TOOL
 from .state import State
-from ..retrieval.service import retrieval_engine
+from ...retrieval.service import retrieval_engine
 
 
 def route_chatbot(state: State):
@@ -33,9 +32,7 @@ def retrieval_router(state: State):
         return "finish_retrieval"
 
     # If the retrieval results are enough, the stages gets clear and gets routed to the finish_retrieval node.
-    if retrieval_engine._enough_information(
-        state.get("retrieval_results", [])
-    ):
+    if retrieval_engine._enough_information(state.get("retrieval_results", [])):
         return "finish_retrieval"
 
     return "retrieve_information"

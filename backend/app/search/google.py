@@ -1,8 +1,9 @@
 from __future__ import annotations
 import logging
-import requests
 
 from ddgs import DDGS
+from copy import deepcopy
+from trafilatura.settings import DEFAULT_CONFIG
 import trafilatura
 
 from ..retrieval.schemas import RetrievalResult, RetrievalStage
@@ -12,6 +13,11 @@ logging.getLogger("primp").setLevel(logging.WARNING)
 
 MAX_RESULTS = 13  # Maximum number of Google search results to return
 MAX_CONTENT_CHARS = 5000
+
+config = deepcopy(DEFAULT_CONFIG)
+config['DEFAULT']['DOWNLOAD_TIMEOUT'] = '3'
+config['DEFAULT']['MAX_REDIRECTS'] = '1'
+config['DEFAULT']['SLEEP_TIME'] = '0'
 
 
 def google_to_results(google_results: list[dict]) -> list[RetrievalResult]:
@@ -51,7 +57,7 @@ def query_ddu_google_search(query: str, max_results: int = MAX_RESULTS) -> list[
 
         if url:
             try:
-                downloaded = trafilatura.fetch_url(url)
+                downloaded = trafilatura.fetch_url(url, config=config)
                 if downloaded:
                     extracted_text = trafilatura.extract(
                         downloaded,

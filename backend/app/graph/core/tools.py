@@ -12,10 +12,10 @@ from langchain_core.messages import ToolMessage
 from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.types import Command
 
-from ..search.static import query_static_search
-from ..search.linkedin import get_recent_jobs
-from ..retrieval.service import retrieval_engine
-from ..retrieval.schemas import RetrievalResult
+from ...search.static import query_static_search
+from ...search.linkedin import get_recent_jobs
+from ...retrieval.service import retrieval_engine
+from ...retrieval.schemas import RetrievalResult
 
 logger = logging.getLogger(__name__)
 
@@ -23,14 +23,13 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def format_results(query: str, results: list[RetrievalResult]) -> str:
+def format_results(query: str, results: list[RetrievalResult], stage: int = 0) -> str:
     """Format the retrieval results into a structured JSON string."""
     if results:
-        status = "FOUND"
-        stage = results[0].stage
+        status = "FOUND " + results[0].stage
+        stage = stage if results[0].stage else -1
     else:
         status = "NO_MATCH"
-        stage = "unknown"
 
     payload = {
         "stage": stage,
@@ -48,19 +47,17 @@ def format_results(query: str, results: list[RetrievalResult]) -> str:
 # ---------------------------------------------------------------------------
 
 @tool
-def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
-    """ Retrieves information from a knowledge base and web search functions. It includes a knowledge base and web search functions.
-        It is a very very slow tool that may take a few seconds to return results, but it is very comprehensive and it is updated.
-        Use it if you need to know the answer to a question that requires external knowledge or recent information.
+def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCallId], stage: int = 0) -> Command:
+    """ Retrieves information from a knowledge base and web search functions.
+        It is a very slow tool that may take a few seconds to return results, but it is very comprehensive and it is updated.
+        There are stages to it starting from 0. The higher the stage, the more sources are searched so it becomes significantly slower.
     """
     logger.info("Retrieve_information tool called")
-    results = retrieval_engine.run_pipeline(query)
-    formatted = format_results(
-        query=query,
-        results=results,
-    )
+    results, next_stage  = retrieval_engine.run_stage(query=query, stage=stage)
+    formatted = format_results(query=query, results=results, stage=next_stage)
 
     return Command(update={"messages": [ToolMessage(content=formatted, tool_call_id=tool_call_id)]})
+
 
 @tool
 def retrieve_job_postings(query: str, location: str, remote_job: bool, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
@@ -78,6 +75,7 @@ def retrieve_job_postings(query: str, location: str, remote_job: bool, tool_call
     formatted = json.dumps(jobs, indent=2, ensure_ascii=False)
 
     return Command(update={"messages": [ToolMessage(content=formatted, tool_call_id=tool_call_id)]})
+
 
 @tool
 def get_current_time(tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
@@ -118,6 +116,7 @@ def read_webpage(url: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> 
 
     return Command(update={"messages": [ToolMessage(content=str(result if result else "No content extracted"), tool_call_id=tool_call_id)]})
 
+
 @tool
 def static_google_search(query: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
     """ Returns a fixed set of results for certain queries, without making external network requests. 
@@ -128,3 +127,18 @@ def static_google_search(query: str, tool_call_id: Annotated[str, InjectedToolCa
     results = query_static_search(str(query))
 
     return Command(update={"messages": [ToolMessage(content=str(results), tool_call_id=tool_call_id)]})
+
+
+"""
+@tool
+def analyze_cv(cv: str, job_postings: list[JobPosting]) -> str:
+    result = cv_graph.invoke(
+        {
+            "cv": cv,
+            "job_postings": job_postings,
+        }
+    )
+
+    return result["analysis"]
+    
+"""

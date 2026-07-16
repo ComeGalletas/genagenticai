@@ -15,7 +15,7 @@ class RetrievalResult():
     content: str
     source: str
     stage: RetrievalStage
-    #status: str          # "FOUND", "NO_MATCH", "ERROR"
-    score: float |None = None
+    status: str | None = None  # "FOUND", "NO_MATCH", "ERROR"
+    score: float | None = None
     confidence: float | None = None
     metadata: dict[str, Any] = field(default_factory=dict)

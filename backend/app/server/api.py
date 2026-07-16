@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from ..graph.graph import run_agent
+from ..graph.core.graph import run_agent
 from ..db.chroma_store import load_vectorstore
 from ..server.schemas import ChatRequest, ChatResponse
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Logging Setup
 # ---------------------------------------------------------------------------
-_LOG_DIR = Path(__file__).parent.parent / "logs"
+_LOG_DIR = Path(__file__).parent.parent.parent / "logs"
 _LOG_DIR.mkdir(exist_ok=True)
 
 _fmt = logging.Formatter(

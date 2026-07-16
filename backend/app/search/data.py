@@ -4,7 +4,7 @@ STATIC_RESULTS: List[Dict[str, str]] = [
     {
         "keywords": "Clair Obscure Expedition 33",
         "title": "French RPG with a mysterious story, puzzles, and exploration using painting and art related concepts for narration and interaction.",
-        "url": "https://expe33.com/",
+        "url": "https://en.wikipedia.org/wiki/Clair_Obscur:_Expedition_33",
         "genre": "RPG, Adventure, Puzzle",
         "snippet": "Official website for Clair Obscure: Expedition 33, a French RPG with a mysterious story, puzzles, and exploration using painting and art related concepts for narration and interaction.",
     },

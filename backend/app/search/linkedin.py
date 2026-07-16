@@ -41,7 +41,7 @@ def get_recent_jobs(keyword: str, location: str = "", remote: bool = False, limi
     Args:
         keyword: Job title/skill (e.g. "software engineer")
         location: City, country, or "Remote"
-        remote: Filter for remote jobs
+        remote: Filter for remote jobs, Default: False
         limit: Max number of jobs to return: Default is 10.
         hours_old: How many hours old the job postings should be: Default is 168 (7 days).
 

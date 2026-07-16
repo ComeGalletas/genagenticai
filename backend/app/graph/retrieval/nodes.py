@@ -1,44 +1,40 @@
+import json
 import logging
-import time
+from dataclasses import asdict
 
-from langchain_ollama import ChatOllama
-from langchain_core.messages import ToolMessage, SystemMessage
+from langchain_core.messages import ToolMessage
 from langgraph.types import Command
 
-from .state import State
-from .tools import retrieval_engine, format_results, retrieve_information, get_current_time, read_webpage, static_google_search, retrieve_job_postings
-
-from .system_prompt import SYSTEM_PROMPT
-SYSTEM_MESSAGE = SystemMessage(content=SYSTEM_PROMPT)
+from ..core.state import State
+from ...retrieval.service import retrieval_engine
+from ...retrieval.schemas import RetrievalResult
 
 logger = logging.getLogger(__name__)
-tools = [static_google_search, get_current_time, read_webpage, retrieve_information, retrieve_job_postings]
 
-_llm = ChatOllama(
-    model="qwen3",
-    temperature=0.1,
-)
-llm_with_tools = _llm.bind_tools(tools)
-
-
-def chatbot(state: State) -> Command:
-    """Invoke the LLM and append its response to the conversation."""
-    logger.debug("Entering chatbot node.")
-    
-    start_time = time.perf_counter()
-    response = llm_with_tools.invoke([SYSTEM_MESSAGE, *state["messages"]])
-    elapsed = time.perf_counter() - start_time
-
-    logger.info("LLM response completed in %.3f seconds.", elapsed)
-
-    if response.tool_calls:
-        logger.info("LLM requested tool: %s", response.tool_calls[0]["name"])
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def format_results(query: str, results: list[RetrievalResult], stage: int = 0) -> str:
+    """Format the retrieval results into a structured JSON string."""
+    if results:
+        status = "FOUND"
+        stage = int(results[0].stage) if stage == -1 else stage
     else:
-        logger.info("LLM produced final response.")
+        status = "NO_MATCH"
 
-    return Command(update={"messages": [response]})
+    payload = {
+        "stage": stage,
+        "query": query,
+        "status": status,
+        "document_count": len(results),
+        "documents": [asdict(r) for r in results]
+    }   
+    
+    return json.dumps(payload, indent=2, ensure_ascii=False)
 
-
+# ---------------------------------------------------------------------------
+# Nodes
+# ---------------------------------------------------------------------------
 def retrieve_information_node(state: State):
     """ Retrieves information from a knowledge base and web search functions. It includes a knowledge base and web search functions.
         It is a very very slow tool that may take a few seconds to return results, but it is very comprehensive and it is updated.

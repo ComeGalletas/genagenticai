@@ -1,4 +1,38 @@
-import { useRef, useMemo, useState, useEffect } from "react";
+import { useRef, useMemo, useState, useEffect, Fragment } from "react";
+import DOMPurify from "dompurify";
+
+// Make every link inside sanitized HTML open in a new tab safely.
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  if (node.tagName === "A") {
+    node.setAttribute("target", "_blank");
+    node.setAttribute("rel", "noreferrer noopener");
+  }
+});
+
+const HTML_TAG_REGEX = /<\/?[a-zA-Z][^>]*>/;
+const URL_SPLIT_REGEX = /(https?:\/\/[^\s<>"')\]]+)/g;
+const URL_TEST_REGEX = /^https?:\/\//
+
+function renderWithLinks(text) {
+  const parts = text.split(URL_SPLIT_REGEX);
+  return parts.map((part, i) =>
+    URL_TEST_REGEX.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noreferrer noopener">
+        &lt;&lt;View Link&gt;&gt;
+      </a>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    )
+  );
+}
+
+function MessageContent({ content }) {
+  if (HTML_TAG_REGEX.test(content)) {
+    const clean = DOMPurify.sanitize(content);
+    return <div className="html-content" dangerouslySetInnerHTML={{ __html: clean }} />;
+  }
+  return <p>{renderWithLinks(content)}</p>;
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -95,7 +129,7 @@ function App() {
         <div className="messages">
           {messages.map((message, index) => (
             <article key={`${message.role}-${index}`} className={`message ${message.role}`}>
-              <p>{message.content}</p>
+              <MessageContent content={message.content} />
             </article>
           ))}
           {isLoading && (
