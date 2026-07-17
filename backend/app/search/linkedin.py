@@ -10,9 +10,12 @@ logger = logging.getLogger(__name__)
 MAX_JOB_LIMIT = 10  # Maximum number of jobs to fetch
 HOURS_OLD = 168  # 7 days in hours
 
+logging.getLogger("JobSpy").setLevel(logging.WARNING)
+
 def clear_job_data(jobs: DataFrame) -> List[Dict[str, Any]]:
     """
     Cleans and structures job data for LLM consumption.
+
     Args:
         jobs: DataFrame of raw job data from scrape_jobs
     """
@@ -37,7 +40,7 @@ def get_recent_jobs(keyword: str, location: str = "", remote: bool = False, limi
     """
     Fetches recent LinkedIn jobs (last week) and returns structured data
     optimized for LLM consumption.
-
+    
     Args:
         keyword: Job title/skill (e.g. "software engineer")
         location: City, country, or "Remote"

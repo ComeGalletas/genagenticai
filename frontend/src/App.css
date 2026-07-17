@@ -103,6 +103,7 @@ body {
 
 .message {
   max-width: 80%;
+  max-height: fit-content;
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 0.75rem 0.9rem;
@@ -249,5 +250,6 @@ body {
 
   .message {
     max-width: 90%;
+    max-height: fit-content;
   }
 }

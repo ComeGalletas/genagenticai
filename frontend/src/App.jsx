@@ -50,7 +50,7 @@ function App() {
     {
       role: "assistant",
       content:
-        "Hi, I am your LangGraph demo assistant. Ask me to search something and I will use the static Google search tool.",
+        "Hi, I am your AI assistant. Ask me to search anything and I will try my best.",
     },
   ]);
   const [input, setInput] = useState("");

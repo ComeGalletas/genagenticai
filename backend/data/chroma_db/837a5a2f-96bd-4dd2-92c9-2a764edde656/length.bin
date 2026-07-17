@@ -1,6 +1,0 @@
-## Project Architecture
-- backend/app/main.py: FastAPI app, CORS, /api/chat endpoint.
-- backend/app/graph.py: LangGraph StateGraph with chatbot and tools nodes.
-- backend/app/tools.py: Tool definitions (static_google_search, knowledge_search).
-- backend/app/rag.py: ChromaDB vector store setup and document retrieval.
-- backend/data/knowledge.txt: The local knowledge file indexed by ChromaDB.ÿÿÿÿÿÿÿ

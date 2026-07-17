@@ -5,11 +5,9 @@ from typing_extensions import TypedDict, NotRequired
 from langgraph.graph.message import add_messages
 
 from ..retrieval.state import RetrievalState
-from ..judge.state import JudgeState
 
-class State(TypedDict):
+class JudgeState(TypedDict):
     messages: Annotated[list, add_messages]
     tool_call_id: NotRequired[str]
     # For retrieval tool
     retrieval: NotRequired[RetrievalState | None]
-    judge: NotRequired[JudgeState | None]

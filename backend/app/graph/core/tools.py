@@ -23,16 +23,16 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def format_results(query: str, results: list[RetrievalResult], stage: int = 0) -> str:
+def format_results(query: str, results: list[RetrievalResult], stage: int = 0, next_stage: int = 0) -> str:
     """Format the retrieval results into a structured JSON string."""
     if results:
-        status = "FOUND " + results[0].stage
-        stage = stage if results[0].stage else -1
+        status = "FOUND"
     else:
         status = "NO_MATCH"
 
     payload = {
         "stage": stage,
+        "next_stage": next_stage,
         "query": query,
         "status": status,
         "document_count": len(results),
@@ -51,10 +51,15 @@ def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCa
     """ Retrieves information from a knowledge base and web search functions.
         It is a very slow tool that may take a few seconds to return results, but it is very comprehensive and it is updated.
         There are stages to it starting from 0. The higher the stage, the more sources are searched so it becomes significantly slower.
+        If the next_stage is negative, it means there is no more stages to search and the tool will return an empty result set.
+        Args.
+            query: The search query.
+            tool_call_id: The unique identifier for the tool call.
+            stage: The stage of the search. Default is 0. Stage 0 is a basic static search, stage 1 is a knowledge database search, and stage 2 is a web search.
     """
     logger.info("Retrieve_information tool called")
     results, next_stage  = retrieval_engine.run_stage(query=query, stage=stage)
-    formatted = format_results(query=query, results=results, stage=next_stage)
+    formatted = format_results(query=query, results=results, stage=stage, next_stage=next_stage)
 
     return Command(update={"messages": [ToolMessage(content=formatted, tool_call_id=tool_call_id)]})
 

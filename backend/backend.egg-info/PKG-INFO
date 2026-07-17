@@ -1,0 +1,84 @@
+Metadata-Version: 2.4
+Name: backend
+Version: 0.1.0
+Summary: Minimal LangGraph backend with different search tools
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn>=0.30.0
+Requires-Dist: langgraph>=0.4.8
+Requires-Dist: langchain>=0.3.25
+Requires-Dist: langchain-community>=0.3.0
+Requires-Dist: langchain-chroma>=0.1.4
+Requires-Dist: langchain-text-splitters>=0.3.0
+Requires-Dist: langchain-ollama>=0.2.0
+Requires-Dist: chromadb>=0.5.0
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: duckduckgo-search
+Requires-Dist: python-jobspy>=1.1.80
+
+# Backend (LangGraph)
+
+## 1) Setup
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .
+copy .env.example .env
+```
+
+Add your `GOOGLE_API_KEY` to `.env`.
+
+## 2) Run
+
+
+```bash
+uvicorn app.main:app --reload --reload-dir app --port 8000
+
+uvicorn app.main:app --reload --reload-dir app --port 8000 --log-level debug
+
+python -m app.main rebuild
+```
+Test at `http://localhost:8000/health`.
+
+
+                START
+                   │
+                   ▼
+              +---------+
+              | chatbot |
+              +---------+
+                   │
+          tool requested?
+           /           \
+         no             yes
+         │               │
+         ▼               ▼
+        END         +---------+
+                    |  tools  |
+                    +---------+
+                         │
+                         ▼
+                    +---------+
+                    | chatbot |
+                    +---------+
+                         │
+          asks for Google?
+           /            \
+         no              yes
+         │                │
+         ▼                ▼
+        END        search already?
+                    /          \
+                  yes          no
+                  │             │
+                  ▼             ▼
+             chatbot      google_search
+                               │
+                               ▼
+                          chatbot
+                               │
+                               ▼
+                              END

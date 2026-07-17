@@ -4,9 +4,8 @@ import logging
 from pathlib import Path
 
 from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
-from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 
 logger = logging.getLogger(__name__)
@@ -14,6 +13,8 @@ logger = logging.getLogger(__name__)
 _DATA_DIR = Path(__file__).parent.parent.parent / "data"
 _CHROMA_DIR = _DATA_DIR / "chroma_db"
 _KNOWLEDGE_DIR = _DATA_DIR / "knowledge"
+
+SIMPLE_KNOWLEDGE_DIR = "data/knowledge"
 
 CHUNK_SIZE = 400
 CHUNK_OVERLAP = 60
@@ -42,7 +43,7 @@ def _build_from_knowledge() -> Chroma:
             f"Knowledge directory not found at {_KNOWLEDGE_DIR}. "
             "Add .txt or .md files before building the vector store."
         )
-
+    
     docs = []
     for file in _KNOWLEDGE_DIR.rglob("*"):
         if file.suffix.lower() not in {".txt", ".md"}:
@@ -53,11 +54,10 @@ def _build_from_knowledge() -> Chroma:
             logger.warning("Skipping %s: %s", file, exc)
             continue
         for doc in loaded:
-            doc.metadata.update({
+            doc.metadata = {
                 "category": file.parent.name,
-                "filename": file.name,
-                "path": str(file.relative_to(_KNOWLEDGE_DIR)),
-            })
+                "filename": file.name
+            }
         docs.extend(loaded)
 
     if not docs:
@@ -65,8 +65,27 @@ def _build_from_knowledge() -> Chroma:
             "No documents found in the knowledge directory. "
             "Add .txt or .md files to backend/data/knowledge/."
         )
+    else:
+        splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=[
+                ("##", "product")
+            ]
+        )
 
-    chunks = RecursiveCharacterTextSplitter(
+        chunks = []
+        for doc in docs:
+            split_docs = splitter.split_text(doc.page_content)
+
+            for chunk in split_docs:
+                chunk.metadata = {
+                    **doc.metadata,
+                    **chunk.metadata
+                }
+
+                chunks.append(chunk)
+
+
+    chunks_2 = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
     ).split_documents(docs)

@@ -14,6 +14,7 @@ class RetrievalEngine:
         self.pipeline = pipeline
         logger.debug("RetrievalEngine initialized with %d stage(s): %s", len(pipeline), [fn.__name__ for fn in pipeline])
 
+
     def run_pipeline(self, query: str) -> list[RetrievalResult]:
         """Run the retrieval pipeline until enough information is found or all sources have been searched."""
         logger.info("run_pipeline | query: %r | stages: %d", query, len(self.pipeline))
@@ -39,6 +40,7 @@ class RetrievalEngine:
         logger.info("run_pipeline complete | total results: %d", len(all_results))
         return all_results
 
+
     def run_stage(self, query: str, stage: int) -> tuple[list[RetrievalResult], int]:
         """Execute exactly one retrieval stage. Returns (results, next_stage); next_stage is -1 when the pipeline has finished."""
         if stage >= len(self.pipeline):
@@ -56,4 +58,4 @@ class RetrievalEngine:
 
     def _enough_information(self, results: list[RetrievalResult]) -> bool:
         """Decide whether retrieval should stop. Replace this with whatever heuristic you like."""
-        return len(results) >= 4
+        return len(results) >= 3

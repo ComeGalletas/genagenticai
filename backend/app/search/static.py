@@ -36,11 +36,12 @@ def query_static_search(query: str) -> list[RetrievalResult]:
                 content=result.get("snippet", ""),
                 source=result.get("url", ""),
                 stage=RetrievalStage.STATIC,
-                score=None,
+                score=100,
                 confidence=None,
             )
         )
     
+    """
     if not results:
         logger.info("No static entry found for %r — Search results were insufficient to answer the question.", normalized)
         return [RetrievalResult(
@@ -54,5 +55,7 @@ def query_static_search(query: str) -> list[RetrievalResult]:
     else:
         logger.info("Static entry found for %r: %r", normalized, results[0]["title"])
 
+    """
+    
     return retrieval_results
 
