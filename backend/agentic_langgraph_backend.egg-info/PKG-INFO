@@ -19,6 +19,7 @@ Requires-Dist: duckduckgo-search<9.0,>=8.1
 Requires-Dist: python-jobspy<2.0,>=1.1
 Requires-Dist: trafilatura>=2.1.0
 Requires-Dist: ddgs>=9.14.4
+Requires-Dist: langdetect>=1.0.9
 
 # Backend (LangGraph)
 

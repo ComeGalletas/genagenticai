@@ -6,14 +6,19 @@ import logging
 from typing import Dict
 from langgraph.types import Command
 
-from .data import STATIC_RESULTS
 from ..retrieval.schemas import RetrievalResult, RetrievalStage
+from .static_data import STATIC_RESULTS
 
 logger = logging.getLogger(__name__)
 
 
 def query_static_search(query: str) -> list[RetrievalResult]:
-    """Return a fixed set of results for certain queries and returns a structured list, without making external network requests."""
+    """Return a fixed set of results for certain queries and returns a structured list, without making external network requests.
+    Args:
+        query (str): The search query string.
+    Returns:
+        list[RetrievalResult]: A list of RetrievalResult objects containing the search results.
+    """
     normalized = query.lower().strip() if query else ""
     logger.info("Google static search function called — query: %r", normalized)
     
@@ -36,26 +41,13 @@ def query_static_search(query: str) -> list[RetrievalResult]:
                 content=result.get("snippet", ""),
                 source=result.get("url", ""),
                 stage=RetrievalStage.STATIC,
-                score=100,
-                confidence=None,
+                confidence=0.95,  # Static results are considered highly relevant
             )
         )
     
-    """
     if not results:
         logger.info("No static entry found for %r — Search results were insufficient to answer the question.", normalized)
-        return [RetrievalResult(
-                title="No relevant information found",
-                content="No relevant information was found to answer the user's question.",
-                source="",
-                stage=RetrievalStage.STATIC,
-                score=None,
-                confidence=None,
-            )]
     else:
         logger.info("Static entry found for %r: %r", normalized, results[0]["title"])
-
-    """
     
     return retrieval_results
-

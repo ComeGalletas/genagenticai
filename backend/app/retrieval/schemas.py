@@ -2,20 +2,20 @@ from enum import StrEnum
 from dataclasses import dataclass, field
 from typing import Any
 
-"""Just names, not function references."""
-class RetrievalStage(StrEnum):
-    STATIC = "query_static_search"
-    RAG = "query_knowledge"
-    GOOGLE = "query_ddu_google_search"
+
+"""Just names, not function references for the available retrieval functions metadata."""
+class RetrievalStage:
+    STATIC: str = "query_static_search"
+    RAG: str = "query_knowledge"
+    GOOGLE: str = "query_ddu_google_search"
 
 
+"""Defines the structure of a retrieval result for LLM usage, including title, content, source URL, stage of retrieval, status, score, confidence, and additional metadata."""
 @dataclass(slots=True)
 class RetrievalResult():
     title: str
     content: str
     source: str
-    stage: RetrievalStage
-    status: str | None = None  # "FOUND", "NO_MATCH", "ERROR"
-    score: float | None = None
+    stage: str
     confidence: float | None = None
     metadata: dict[str, Any] = field(default_factory=dict)

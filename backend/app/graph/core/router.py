@@ -1,22 +1,34 @@
 from langgraph.graph import END
 
-from ...config import USE_RETRIEVAL_PIPELINE_TOOL
 from .state import State
+from typing import cast
+
 from ...retrieval.service import retrieval_engine
+
+from langchain_core.messages import AIMessage
+
+
+from ...config import USE_RETRIEVAL_PIPELINE_TOOL # to be deprecated in the future, it is used to disable the retrieval pipeline and use the tools instead.
 
 
 def route_chatbot(state: State):
     """ Decide where to go after the chatbot.
         It is used to redirect to a retrieve_information node instead of the tool option.
     """
-    # If the last message from the LLM does not contain any tool calls, we can assume that the LLM has produced a final response and we can go to the END node.
+    # If the last message from the LLM does not contain tool calls,
+    # route to judge so the final response is polished before returning.
     last = state["messages"][-1]
+
+    print("Last state:", state)
+    
     if not getattr(last, "tool_calls", None):
-        return END
+        print("Routing to judge")
+        return "judge"
 
     # This can be refactored to allow for more complex routing
-    tool_name = last.tool_calls[0]["name"]
+    tool_name = cast(AIMessage, last).tool_calls[0]["name"]
     if not USE_RETRIEVAL_PIPELINE_TOOL and tool_name == "retrieve_information":
+        print("Routing to retrieve_information")
         return "retrieve_information"
 
     return "tools"

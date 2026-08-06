@@ -13,3 +13,4 @@ duckduckgo-search<9.0,>=8.1
 python-jobspy<2.0,>=1.1
 trafilatura>=2.1.0
 ddgs>=9.14.4
+langdetect>=1.0.9

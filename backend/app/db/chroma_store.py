@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 
@@ -20,7 +20,7 @@ CHUNK_SIZE = 400
 CHUNK_OVERLAP = 60
 
 _embeddings = OllamaEmbeddings(model="nomic-embed-text")
-#_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")  # TODO: make this configurable
+#_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")  # TODO: make this configurable if additional models are added in the future
 _vectorstore: Chroma | None = None
 
 
@@ -29,15 +29,17 @@ _vectorstore: Chroma | None = None
 # ---------------------------------------------------------------------------
 
 def _open_existing() -> Chroma:
-    return Chroma(
-        persist_directory=str(_CHROMA_DIR),
-        embedding_function=_embeddings,
-        collection_name="knowledge",
-    )
+    """Open the persisted ChromaDB collection without rebuilding it."""
+    return Chroma(persist_directory=str(_CHROMA_DIR), embedding_function=_embeddings, collection_name="knowledge")
 
 
 def _build_from_knowledge() -> Chroma:
-    """Embed all .txt/.md files in the knowledge directory and persist to ChromaDB."""
+    """Scan the knowledge directory for .txt/.md files, split, embed and persist to the vector store.
+
+    Documents are split on ## Markdown headers, then further chunked with configurable chunk size and overlap.  
+    Each chunk inherits category and filename metadata from its source file.  
+    Raises FileNotFoundError if the knowledge directory is missing and ValueError if no eligible files are found inside it.
+    """
     if not _KNOWLEDGE_DIR.exists():
         raise FileNotFoundError(
             f"Knowledge directory not found at {_KNOWLEDGE_DIR}. "
@@ -54,49 +56,25 @@ def _build_from_knowledge() -> Chroma:
             logger.warning("Skipping %s: %s", file, exc)
             continue
         for doc in loaded:
-            doc.metadata = {
-                "category": file.parent.name,
-                "filename": file.name
-            }
+            doc.metadata = {"category": file.parent.name, "filename": file.name}
         docs.extend(loaded)
 
     if not docs:
-        raise ValueError(
-            "No documents found in the knowledge directory. "
-            "Add .txt or .md files to backend/data/knowledge/."
-        )
+        raise ValueError("No documents found in the knowledge directory. Add .txt or .md files to backend/data/knowledge/.")
     else:
-        splitter = MarkdownHeaderTextSplitter(
-            headers_to_split_on=[
-                ("##", "product")
-            ]
-        )
+        splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[("##", "product")])
 
         chunks = []
         for doc in docs:
             split_docs = splitter.split_text(doc.page_content)
-
             for chunk in split_docs:
-                chunk.metadata = {
-                    **doc.metadata,
-                    **chunk.metadata
-                }
-
+                chunk.metadata = {**doc.metadata, **chunk.metadata}
                 chunks.append(chunk)
 
-
-    chunks_2 = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
-    ).split_documents(docs)
+    # chunks = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP).split_documents(docs) # Optional: use this instead of MarkdownHeaderTextSplitter if you want to split on character count instead of headers
 
     logger.info("Building vector store — %d chunk(s) from %d file(s)", len(chunks), len(docs))
-    return Chroma.from_documents(
-        chunks,
-        embedding=_embeddings,
-        persist_directory=str(_CHROMA_DIR),
-        collection_name="knowledge",
-    )
+    return Chroma.from_documents(chunks, embedding=_embeddings, persist_directory=str(_CHROMA_DIR), collection_name="knowledge")
 
 
 # ---------------------------------------------------------------------------
@@ -104,27 +82,27 @@ def _build_from_knowledge() -> Chroma:
 # ---------------------------------------------------------------------------
 
 def get_vectorstore() -> Chroma | None:
-    """Return the in-memory singleton. None if not yet loaded."""
+    """Return the in-memory singleton without triggering any I/O.
+
+    Returns None if the store has not been loaded or built yet.
+    Call load_vectorstore() or load_or_build_vectorstore() first.
+    """
     return _vectorstore
 
 
 def load_vectorstore() -> Chroma | None:
-    """
-    Load the existing ChromaDB into the singleton.
-    If the database does not exist, logs a warning and returns None — the
-    application continues running without a knowledge base.
-    Call load_or_build_vectorstore() to create the DB from knowledge files.
+    """Load the existing ChromaDB into the module-level singleton.
+
+    Returns the singleton immediately if already loaded.  Returns None and logs a warning if the database directory does not exist
+    the application can still start without a knowledge base.
+    Call load_or_build_vectorstore() to create it.
     """
     global _vectorstore
     if _vectorstore is not None:
         return _vectorstore
 
     if not _CHROMA_DIR.exists():
-        logger.warning(
-            "ChromaDB not found at %s — knowledge base unavailable. "
-            "Run load_or_build_vectorstore() to create it.",
-            _CHROMA_DIR,
-        )
+        logger.warning("ChromaDB not found at %s — knowledge base unavailable. Run load_or_build_vectorstore() to create it.", _CHROMA_DIR)
         return None
 
     try:
@@ -137,10 +115,10 @@ def load_vectorstore() -> Chroma | None:
 
 
 def load_or_build_vectorstore() -> Chroma:
-    """
-    On-demand loader: returns the singleton if already loaded, tries to open an
-    existing ChromaDB, and falls back to building one from the knowledge files.
-    Raises on unrecoverable errors.
+    """Return the vector store, loading or building it as needed.
+
+    Checks the in-memory singleton first, then the persisted database on disk,
+    then falls back to building from the knowledge directory.  Raises on failure.
     """
     global _vectorstore
     if _vectorstore is not None:
@@ -160,16 +138,17 @@ def load_or_build_vectorstore() -> Chroma:
 
 
 def rebuild_vectorstore() -> Chroma:
-    """
-    Drop the current singleton and ChromaDB on disk, then rebuild from the
-    knowledge files. Call this after adding or editing .md / .txt files.
+    """Wipe the persisted database and rebuild the vector store from the knowledge directory.
+
+    Resets the in-memory singleton, deletes the database from disk, then rebuilds.
+    Use this after adding, editing, or removing knowledge files.
     """
     global _vectorstore
     import shutil
 
     if _vectorstore is not None:
         try:
-            _vectorstore._client.reset()  # release Chroma's file handles
+            _vectorstore._client.reset()  # release Chroma file handles
         except Exception:
             pass
         _vectorstore = None

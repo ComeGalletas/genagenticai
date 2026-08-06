@@ -5,13 +5,14 @@ import time
 from typing import Any, Hashable
 
 from langchain_core.runnables import RunnableConfig
+from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from .state import State
 from .tools import retrieve_information, get_current_time, read_webpage, static_google_search, retrieve_job_postings
-from .nodes import chatbot
+from .nodes import chatbot, judge_response
 from ..retrieval.nodes import retrieve_information_node, finish_retrieval_node
 from .router import route_chatbot, retrieval_router
 
@@ -60,6 +61,7 @@ else:
 # Nodes ---------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 builder.add_node("chatbot", chatbot)
+builder.add_node("judge", judge_response)
 builder.add_node("tools", tool_node)
 #builder.add_node("cv_analysis", cv_analysis_node)
 if not USE_RETRIEVAL_PIPELINE_TOOL:
@@ -70,12 +72,13 @@ if not USE_RETRIEVAL_PIPELINE_TOOL:
 # ---------------------------------------------------------------------------
 builder.add_edge(START, "chatbot")
 builder.add_edge("tools", "chatbot")
-#builder.add_edge("cv_analysis", "chatbot")
+builder.add_edge("judge", END)
 # ---------------------------------------------------------------------------
 if USE_RETRIEVAL_PIPELINE_TOOL:
-    builder.add_conditional_edges("chatbot", tools_condition)
+    builder.add_conditional_edges("chatbot", route_chatbot, {"tools": "tools", "judge": "judge"})
 else:
-    routes: dict[Hashable, str] = {"tools": "tools", "retrieve_information": "retrieve_information", END: END}
+    routes: dict[Hashable, str] = {"tools": "tools", "retrieve_information": "retrieve_information", "judge": "judge"}
+    #builder.add_conditional_edges("judge", tool_node, {"tools": "tools", "retrieve_information": "retrieve_information"})
     builder.add_conditional_edges("chatbot", route_chatbot, routes)
     builder.add_conditional_edges("retrieve_information", retrieval_router, {"retrieve_information": "retrieve_information", "finish_retrieval": "finish_retrieval"})
     builder.add_edge("finish_retrieval", "chatbot")
@@ -84,11 +87,10 @@ else:
 graph = builder.compile(checkpointer=memory)
 
 
-
 # ---------------------------------------------------------------------------
 # Visual Test - generates a PNG of the graph and opens it in the default image viewer.
 # ---------------------------------------------------------------------------
-"""
+
 from pathlib import Path
 import webbrowser
 
@@ -97,24 +99,31 @@ png = graph.get_graph().draw_mermaid_png()
 path = Path("graph.png")
 path.write_bytes(png)
 
-webbrowser.open(path.resolve().as_uri())
-"""
+#webbrowser.open(path.resolve().as_uri())
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
 def run_agent(user_message: str, thread_id: str = "default") -> str:
-    """Run one conversation turn through the graph."""
-    logger.info("run_agent | thread=%s | message=%r", thread_id, user_message[:120])
+    """Run one conversation turn through the graph.
+    Args:
+        user_message: The message from the user to process.
+        thread_id: A unique identifier for the conversation thread. Defaults to "default".
+    Returns:
+        The response from the agent / LLM as a string for the user.
+    """
+    logger.info("Run Agent | thread=%s | message=%r", thread_id, user_message[:120])
 
     config = RunnableConfig(configurable={"thread_id": thread_id})
-    inputs = State(messages=[{"role": "user", "content": user_message}])
+    inputs: State = State(messages=[HumanMessage(content=user_message)])
     start = time.perf_counter()
 
     try:
         for event in graph.stream(inputs, config=config, stream_mode="updates"):
             for node, update in event.items():
-                logger.info("Executed node: %s", node)
+                #print(f"Node: {node}, Update: {update}")
+                logger.info("Finished executed node: %s", node)
                 if "messages" in update:
                     logger.info("Produced %d message(s)", len(update["messages"]))
                 if "pending_pipeline" in update:
@@ -124,8 +133,8 @@ def run_agent(user_message: str, thread_id: str = "default") -> str:
         raise
 
     logger.info("Finished in %.2fs", time.perf_counter() - start)
-
     state = graph.get_state(config).values
+    #logger.info("Agent full RETRIEVAL response: %s", state.get("retrieval", []))
     messages = state.get("messages", [])
     logger.debug("Final pipeline | pending=%s completed=%s", state.get("pending_pipeline"), state.get("completed_pipeline"))
 
@@ -134,8 +143,8 @@ def run_agent(user_message: str, thread_id: str = "default") -> str:
             text = _extract_text(message.content)
             if not text or not text.strip():
                 logger.warning("Last AI message has empty content.")
-                #logger.info("full %s text(s)", message)
-                return "I could not produce a response."
+                return "I could not produce a response - empty message -."
             return text
 
-    return "I could not produce a response."
+    logger.warning("No AI message found in the conversation.")
+    return "I could not produce a response - no AI message -."

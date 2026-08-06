@@ -1,18 +1,13 @@
 from __future__ import annotations
-from importlib.metadata import metadata
-import logging
-import httpx
-from bs4 import BeautifulSoup
 
+import re
+import logging
 from typing import Any
 
-from ddgs import DDGS
-from copy import deepcopy
-from trafilatura.settings import DEFAULT_CONFIG
+import httpx
 import trafilatura
-
-from urllib.parse import urlparse
-
+from bs4 import BeautifulSoup
+from ddgs import DDGS
 
 from ..retrieval.schemas import RetrievalResult, RetrievalStage
 
@@ -20,62 +15,62 @@ logger = logging.getLogger(__name__)
 logging.getLogger("primp").setLevel(logging.WARNING)
 logging.getLogger("trafilatura").setLevel(logging.ERROR)
 
-MAX_RESULTS = 7  # Maximum number of Google search results to return
-MAX_CONTENT_CHARS = 5000
+MAX_RESULTS = 3        # Maximum number of search results to return per query
+MAX_CONTENT_CHARS = 1000  # Hard cap on extracted text to avoid oversized payloads
+MIN_WORDS = 40
 
-config = deepcopy(DEFAULT_CONFIG)
-config['DEFAULT']['DOWNLOAD_TIMEOUT'] = '3'
-config['DEFAULT']['MAX_REDIRECTS'] = '1'
-config['DEFAULT']['SLEEP_TIME'] = '0'
 
 def fetch_webpage(url: str, fallback_content: str = "", timeout: int = 15) -> tuple[str, dict[str, Any]]:
-    """
-    Download a webpage and extract its readable content.
+    """Download a webpage and extract its readable plain-text content.
 
-    Falls back to the search snippet if downloading or extraction fails.
+    Attempts to fetch the URL with ``httpx``, then runs ``trafilatura`` to
+    extract the main body text from the HTML.  If trafilatura cannot extract
+    anything meaningful (e.g. heavy JavaScript pages), ``BeautifulSoup`` is
+    used as a secondary fallback to get all visible text.  If the HTTP request
+    itself fails for any reason, ``fallback_content`` (typically the search
+    snippet) is returned instead.
+
+    Args:
+        url: The URL to download.  An empty string skips the request entirely.
+        fallback_content: Text to return when the page cannot be fetched or
+            parsed. Defaults to ``""``.
+        timeout: HTTP request timeout in seconds.  Defaults to ``15``.
+    Returns:
+        A two-element tuple, (text, metadata) for the webpage.
     """
     metadata: dict[str, Any] = {"content_source": "snippet"}
     if not url:
         return fallback_content, metadata
 
     try:
-        response = httpx.get(
-            url,
-            timeout=timeout,
-            follow_redirects=True,
-            headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 Chrome/138.0 Safari/537.36"
-                )
-            },
+        response = httpx.get(url, timeout=timeout, follow_redirects=True,
+            headers={"User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 Chrome/138.0 Safari/537.36"
+            )},
         )
 
         if response.status_code != 200:
             metadata["status_code"] = response.status_code
             return fallback_content, metadata
-
         if "text/html" not in response.headers.get("Content-Type", ""):
             metadata["content_type"] = response.headers.get("Content-Type")
             return fallback_content, metadata
 
         html = response.text
+        text = trafilatura.extract(html, include_comments=False, include_tables=True, include_formatting=False)
 
-        text = trafilatura.extract(
-            html,
-            include_comments=False,
-            include_tables=True,
-            include_formatting=False,
-        )
-
-        # Fallback if Trafilatura couldn't extract anything
+        # Secondary fallback: BeautifulSoup when trafilatura yields nothing, html source gets extracted as plain text
         if not text:
-            soup = BeautifulSoup(html, "html.parser")
-            text = soup.get_text(" ", strip=True)
-
+            text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+        # Add constant metadata regardless if there were search results or not and limits the text if there is, so the LLM can reason about the source of the content.
         if text:
-            metadata["content_source"] = "webpage"
-            return text[:MAX_CONTENT_CHARS], metadata
+            text = re.sub(r"\s+", " ", text).strip()
+            word_count = len(re.findall(r"\b\w+\b", text))
+
+            if word_count >= MIN_WORDS:
+                metadata["content_source"] = "webpage"
+                return text[:MAX_CONTENT_CHARS], metadata
 
     except Exception as e:
         metadata["error"] = str(e)
@@ -84,10 +79,20 @@ def fetch_webpage(url: str, fallback_content: str = "", timeout: int = 15) -> tu
 
 
 def query_ddu_google_search(query: str, max_results: int = MAX_RESULTS) -> list[RetrievalResult]:
-    """
-    Search DuckDuckGo and enrich each result with webpage content.
-    """
+    """Search DuckDuckGo and enrich each result with full webpage content.
 
+    Issues a DuckDuckGo text search via ``ddgs.DDGS``, then calls
+    :func:`fetch_webpage` for every result URL to replace the short snippet
+    with the actual page body (up to ``MAX_CONTENT_CHARS`` characters).  If
+    the DuckDuckGo request fails entirely, an empty list is returned and the
+    exception is logged.
+
+    Args:
+        query: The search query string to send to DuckDuckGo.
+        max_results: Maximum number of results to request.
+    Returns:
+        A list of ``RetrievalResult`` objects. Returns an empty list on search failure.
+    """
     logger.debug("DuckDuckGo query: %r", query)
 
     try:
@@ -98,116 +103,21 @@ def query_ddu_google_search(query: str, max_results: int = MAX_RESULTS) -> list[
         return []
 
     retrieval_results: list[RetrievalResult] = []
-
     for result in results:
-        title = result.get("title", "Untitled")
-        url = result.get("href", "")
+        title   = result.get("title", "Untitled")
+        url     = result.get("href", "")
         snippet = result.get("body", "")
 
-        content, metadata = fetch_webpage(url=url, fallback_content=snippet)
+        content, meta = fetch_webpage(url=url, fallback_content=snippet)
+        retrieval_results.append(RetrievalResult(
+            title=title,
+            content=content,
+            source=url,
+            stage=RetrievalStage.GOOGLE,
+            metadata=meta,
+            confidence=0.92,  # DuckDuckGo results are considered highly relevant
+        ))
 
-        retrieval_results.append(
-            RetrievalResult(
-                title=title,
-                content=content,
-                source=url,
-                stage=RetrievalStage.GOOGLE,
-                metadata=metadata,
-            )
-        )
-
-    logger.info("Returning %d Google result(s) for query %r", len(retrieval_results), query)
-
-    return retrieval_results
-
-
-def query_ddu_google_search_oldi(query: str, max_results: int = MAX_RESULTS) -> list[RetrievalResult]:
-    """Search DuckDuckGo and return extracted webpage content."""
-    logger.debug("Google query: %r", query)
-
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
-    except Exception:
-        logger.exception("DuckDuckGo search failed")
-        return []
-
-    retrieval_results: list[RetrievalResult] = []
-    for result in results:
-        title = result.get("title", "Untitled")
-        url = result.get("href", "")
-        snippet = result.get("body", "")
-        content = snippet
-        metadata: dict[str, str | None] = {"engine": "DuckDuckGo", "content_source": "snippet",}
-
-        if url:
-            try:
-                downloaded = trafilatura.fetch_url(url, config=config)
-                if downloaded:
-                    extracted_text = trafilatura.extract(
-                        downloaded,
-                        include_comments=False,
-                        include_tables=True,
-                        include_formatting=False,
-                    )
-                    extracted_metadata = trafilatura.extract_metadata(downloaded)
-                    if extracted_text:
-                        content = extracted_text[:MAX_CONTENT_CHARS]
-                        metadata["content_source"] = "trafilatura"
-
-                    if extracted_metadata:
-                        if extracted_metadata.sitename:
-                            metadata["site"] = extracted_metadata.sitename
-                        if extracted_metadata.author:
-                            metadata["author"] = extracted_metadata.author
-                        if extracted_metadata.date:
-                            metadata["date"] = extracted_metadata.date
-                        if extracted_metadata.language:
-                            metadata["language"] = extracted_metadata.language
-                        if extracted_metadata.hostname:
-                            metadata["hostname"] = extracted_metadata.hostname
-                else:
-                    logger.debug("Trafilatura could not download %s", url)
-
-            except Exception as e:
-                logger.warning("Failed to extract %s: %s", url, e)
-        
-        retrieval_results.append(
-            RetrievalResult(
-                title=title,
-                content=content,
-                source=url,
-                stage=RetrievalStage.GOOGLE,
-                metadata=metadata,
-            )
-        )
-
-    logger.info("Returning %d Google result(s) for query %r", len(retrieval_results), query)
-
-    return retrieval_results
-
-
-def query_ddu_google_search_old(query: str, max_results: int = MAX_RESULTS) -> list[RetrievalResult]:
-    """Search DuckDuckGo and return structured retrieval results."""
-    logger.debug("Google query: %r", query)
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
-    except Exception:
-        logger.exception("DuckDuckGo search failed")
-        return []
-    
-    retrieval_results: list[RetrievalResult] = []
-    for result in results:
-        retrieval_results.append(
-            RetrievalResult(
-                title=result.get("title", "Untitled"),
-                content=result.get("body", ""),
-                source=result.get("href", ""),
-                stage=RetrievalStage.GOOGLE,
-                metadata={"engine": "DuckDuckGo"},
-            )
-        )
-    logger.info("Returning %d Google result(s) for query %r", len(retrieval_results), query) 
+    logger.info("Returning %d DuckDuckGo result(s) for query %r", len(retrieval_results), query)
 
     return retrieval_results
