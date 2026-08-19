@@ -58,11 +58,21 @@ function App() {
   // "checking" | "online" | "offline"
   const [backendStatus, setBackendStatus] = useState("checking");
 
-  // Check backend health once on mount.
+  // Check backend health on mount, then retry every 10s until it answers.
   useEffect(() => {
-    fetch(`${API_BASE_URL}/health`)
-      .then((res) => (res.ok ? setBackendStatus("online") : setBackendStatus("offline")))
-      .catch(() => setBackendStatus("offline"));
+    let timer;
+    const check = () =>
+      fetch(`${API_BASE_URL}/health`)
+        .then((res) => res.ok)
+        .catch(() => false)
+        .then((ok) => {
+          setBackendStatus(ok ? "online" : "offline");
+          if (ok) clearInterval(timer);
+        });
+
+    check();
+    timer = setInterval(check, 10000);
+    return () => clearInterval(timer);
   }, []);
 
   // Scroll to the bottom whenever a message is added or the loading indicator appears.

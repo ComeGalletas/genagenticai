@@ -8,11 +8,10 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import ToolNode
 
 from .state import State
-from .tools import retrieve_information, get_current_time, read_webpage, static_google_search, retrieve_job_postings
-from .nodes import chatbot, judge_response
+from .nodes import chatbot, detect_language, judge_response, tools as llm_tools
 from ..retrieval.nodes import retrieve_information_node, finish_retrieval_node
 from .router import route_chatbot, retrieval_router
 
@@ -53,13 +52,11 @@ def _extract_text(content: Any) -> str:
 # Use USE_RETRIEVAL_PIPELINE_TOOL to switch between using the retrieval pipeline tool or not. If set to False, the retrieve_information_node will be used instead. 
 memory = MemorySaver()
 builder = StateGraph(State)
-if USE_RETRIEVAL_PIPELINE_TOOL:
-    tool_node = ToolNode([get_current_time, read_webpage, retrieve_information, retrieve_job_postings])
-else:
-    tool_node = ToolNode([static_google_search, get_current_time, read_webpage, retrieve_job_postings])
+tool_node = ToolNode(llm_tools)  # same list bound to the LLM, so every advertised tool is executable
 # ---------------------------------------------------------------------------
 # Nodes ---------------------------------------------------------------------
 # ---------------------------------------------------------------------------
+builder.add_node("detect_language", detect_language)
 builder.add_node("chatbot", chatbot)
 builder.add_node("judge", judge_response)
 builder.add_node("tools", tool_node)
@@ -70,7 +67,8 @@ if not USE_RETRIEVAL_PIPELINE_TOOL:
 # ---------------------------------------------------------------------------
 # Edges ---------------------------------------------------------------------
 # ---------------------------------------------------------------------------
-builder.add_edge(START, "chatbot")
+builder.add_edge(START, "detect_language")
+builder.add_edge("detect_language", "chatbot")
 builder.add_edge("tools", "chatbot")
 builder.add_edge("judge", END)
 # ---------------------------------------------------------------------------
@@ -116,7 +114,7 @@ def run_agent(user_message: str, thread_id: str = "default") -> str:
     logger.info("Run Agent | thread=%s | message=%r", thread_id, user_message[:120])
 
     config = RunnableConfig(configurable={"thread_id": thread_id})
-    inputs: State = State(messages=[HumanMessage(content=user_message)])
+    inputs: State = {"messages": [HumanMessage(content=user_message)]}
     start = time.perf_counter()
 
     try:
@@ -124,10 +122,13 @@ def run_agent(user_message: str, thread_id: str = "default") -> str:
             for node, update in event.items():
                 #print(f"Node: {node}, Update: {update}")
                 logger.info("Finished executed node: %s", node)
-                if "messages" in update:
-                    logger.info("Produced %d message(s)", len(update["messages"]))
-                if "pending_pipeline" in update:
-                    logger.info("Pending pipeline: %s", update["pending_pipeline"])
+                if update is not None:
+                    if "messages" in update:
+                        logger.info("Produced %d message(s)", len(update["messages"]))
+                    if "pending_pipeline" in update:
+                        logger.info("Pending pipeline: %s", update["pending_pipeline"])
+                else:
+                    logger.info("Unavailable update for node: %s", node)
     except Exception:
         logger.exception("Graph execution failed")
         raise

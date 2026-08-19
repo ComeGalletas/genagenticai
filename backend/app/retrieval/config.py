@@ -1,5 +1,5 @@
 from ..db.rag import query_knowledge
-from ..search.google import query_ddu_google_search
+from ..search.ddgo import query_ddu_google_search
 from ..search.static import query_static_search
 
 RETRIEVAL_PIPELINE = [

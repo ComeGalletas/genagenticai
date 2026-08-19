@@ -19,7 +19,7 @@ def route_chatbot(state: State):
     # route to judge so the final response is polished before returning.
     last = state["messages"][-1]
 
-    print("Last state:", state)
+    #print("Last state:", state)
     
     if not getattr(last, "tool_calls", None):
         print("Routing to judge")

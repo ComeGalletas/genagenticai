@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger("primp").setLevel(logging.WARNING)
 logging.getLogger("trafilatura").setLevel(logging.ERROR)
 
-MAX_RESULTS = 3        # Maximum number of search results to return per query
+MAX_RESULTS = 5        # Maximum number of search results to return per query
 MAX_CONTENT_CHARS = 1000  # Hard cap on extracted text to avoid oversized payloads
 MIN_WORDS = 40
 

@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from .server.api import app
+from typing import Any
+
+
+def __getattr__(name: str) -> Any:
+    """Lazily expose the FastAPI app so CLI rebuilds avoid server imports."""
+    if name == "app":
+        from .server.api import app as fastapi_app
+        return fastapi_app
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 if __name__ == "__main__":
     """Main entry point for the vector store outside the agentic AI app. Rebuilds when starting the app as a python app with the 'rebuild' argument."""

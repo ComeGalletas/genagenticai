@@ -35,7 +35,7 @@ def clear_job_data(jobs: DataFrame) -> List[Dict[str, Any]]:
 
     return structured_jobs
 
-def get_recent_jobs(keyword: str, location: str = "", remote: bool = False, limit: int = MAX_JOB_LIMIT, hours_old: int = HOURS_OLD, **kwargs) -> DataFrame | List[Dict[str, Any]]:
+def get_recent_jobs(keyword: str, location: str = "", remote: bool = False, limit: int = MAX_JOB_LIMIT, hours_old: int = HOURS_OLD, **kwargs) -> List[Dict[str, Any]] | None:
     """
     Fetches recent LinkedIn jobs and returns structured data optimized for LLM consumption.
     Args:
@@ -46,7 +46,7 @@ def get_recent_jobs(keyword: str, location: str = "", remote: bool = False, limi
         hours_old: How many hours old the job postings should be: Default is 168 (7 days).
 
     Returns:
-        DataFrame | List of clean job dictionaries
+        List of clean job dictionaries | None
     """
     logger.info("Job Posting query: %s | Location: %s, Remote: %s, Limit: %s, Hours Old: %s", keyword, location, remote, limit, hours_old)
 
@@ -54,8 +54,11 @@ def get_recent_jobs(keyword: str, location: str = "", remote: bool = False, limi
         jobs: DataFrame = scrape_jobs(site_name=["linkedin"], search_term=keyword, location=location, results_wanted=limit, hours_old=hours_old, remote=remote, **kwargs)
         structured_jobs = clear_job_data(jobs)
 
+        if not structured_jobs:
+            logger.warning("LinkedIn returned 0 jobs — usually rate limiting, retry later.")
+
         logger.info("Structured %d jobs for LLM consumption.", len(structured_jobs))
-        logger.info("Structured jobs for LLM consumption: %s", structured_jobs)
+        #logger.info("Structured jobs for LLM consumption: %s", structured_jobs)
         
         return structured_jobs
     

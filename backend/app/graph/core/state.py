@@ -12,7 +12,7 @@ from ..judge.state import JudgeState
 
 class State(MessagesState):
     # messages: Annotated[list[AnyMessage], add_messages] if not using messagesstate
-    user_language: str | None
+    user_language: NotRequired[str | None]
     tool_call_id: NotRequired[str]
     # For retrieval tool
     retrieval: NotRequired[Annotated[list[RetrievalState], operator.add]]

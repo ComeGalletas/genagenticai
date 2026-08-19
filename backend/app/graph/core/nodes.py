@@ -1,8 +1,10 @@
 from dataclasses import asdict
 import logging
+import re
 import time
 from typing import cast
-from langdetect import detect
+from langdetect import DetectorFactory, LangDetectException, detect_langs
+from babel import Locale
 
 
 from ..judge import state
@@ -14,19 +16,24 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.types import Command
 
 from .state import State
-from .tools import get_current_time, read_webpage, retrieve_information, retrieve_job_postings
+from .tools import get_current_time, read_webpage, retrieve_baloto_results, retrieve_information, retrieve_job_postings, suggest_baloto_numbers
 from .system_prompt import SYSTEM_PROMPT
 from ..judge.system_prompt import JUDGE_SYSTEM_PROMPT
+
+DetectorFactory.seed = 0  # langdetect samples randomly by default; a fixed seed makes it deterministic
+MIN_DETECTABLE_CHARS = 12
+MIN_LANGUAGE_CONFIDENCE = 0.85
+_LANGUAGE_NOISE = re.compile(r"```.*?```|`[^`]*`|https?://\S+|[\d_/\\<>{}\[\]]+", re.DOTALL)
 
 SYSTEM_MESSAGE = SystemMessage(content=SYSTEM_PROMPT)
 JUDGE_SYSTEM_MESSAGE = SystemMessage(content=JUDGE_SYSTEM_PROMPT)
 
 logger = logging.getLogger(__name__)
 
-tools = [get_current_time, read_webpage, retrieve_information, retrieve_job_postings]
+tools = [get_current_time, read_webpage, retrieve_information, retrieve_baloto_results, retrieve_job_postings, suggest_baloto_numbers]
 _llm = ChatOllama(
-    #model="qwen3.6",
-    model="qwen3:14b", 
+    #model="qwen3.8", 
+    model="qwen3.6",
     #model="qwen3:30b-a3b",
     temperature=0.1
 )
@@ -48,6 +55,16 @@ def _extract_text(content) -> str:
         if parts:
             return "\n".join(parts)
     return str(content)
+
+
+def _language_name(code: str | None) -> str:
+    """Turn a langdetect code ('es', 'zh-cn') into an English language name, falling back to the code."""
+    if not code:
+        return "unknown"
+    try:
+        return Locale.parse(code.replace("-", "_")).get_display_name("en") or code
+    except Exception:
+        return code
 
 
 def build_retrieval_context(state: State) -> SystemMessage | None:
@@ -94,6 +111,30 @@ def build_retrieval_context(state: State) -> SystemMessage | None:
 # ---------------------------------------------------------------------------
 # Nodes
 # ---------------------------------------------------------------------------
+def detect_language(state: State) -> Command:
+    """Deterministically tag the turn with the language of the latest user message."""
+    last_human = next((m for m in reversed(state["messages"]) if getattr(m, "type", "") == "human"), None)
+    raw = _extract_text(last_human.content) if last_human is not None else ""
+    text = _LANGUAGE_NOISE.sub(" ", raw).strip()  # urls, code and digits push langdetect towards English
+
+    previous = state.get("user_language")
+    language = previous
+    if len(text) >= MIN_DETECTABLE_CHARS:
+        try:
+            candidates = detect_langs(text)
+            best = candidates[0]
+            logger.debug("Language candidates: %s", candidates)
+            if best.prob >= MIN_LANGUAGE_CONFIDENCE:
+                language = best.lang
+            else:
+                logger.info("Language guess %s rejected at %.2f confidence, keeping %s", best.lang, best.prob, previous)
+        except LangDetectException:
+            logger.warning("Language detection failed for %r", text[:60])
+
+    logger.info("Detected user language: %s", _language_name(language))
+    return Command(update={"user_language": _language_name(language)})
+
+
 def chatbot(state: State) -> Command:
     """Invoke the LLM and append its response to the conversation.
     Args:
@@ -110,10 +151,6 @@ def chatbot(state: State) -> Command:
 
     messages.extend(state["messages"])
 
-    user_message = state["messages"][-1].content
-    language = detect(user_message)
-    state["user_language"] = language
-    
     start_time = time.perf_counter()
     response = cast(AIMessage, llm_with_tools.invoke([SYSTEM_MESSAGE, *messages]))
     elapsed = time.perf_counter() - start_time
@@ -125,13 +162,13 @@ def chatbot(state: State) -> Command:
         logger.info("LLM produced final response.")
         
     #print("LLM response:", response)
-    return Command(update={"user_language": language, "messages": [response]})
+    return Command(update={"messages": [response]})
 
 
 def judge_response(state: State) -> Command:
     """Review the chatbot final text and return a clear HTML response for the user."""
     logger.debug("Entering judge node.")
-    logger.info("Judge State: %s", state)
+    #logger.info("Judge State: %s", state)
 
 
     last_ai = next((m for m in reversed(state["messages"]) if getattr(m, "type", "") == "ai"), None)

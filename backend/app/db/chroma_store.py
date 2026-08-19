@@ -1,162 +1,169 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
 
-from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import MarkdownHeaderTextSplitter
-from langchain_ollama import OllamaEmbeddings
+import chromadb
+from langchain_core.documents import Document
 from langchain_chroma import Chroma
+from langchain_ollama import OllamaEmbeddings
+
+from .settings import CHROMA_DIR, DEFAULT_COLLECTION, EMBEDDING_MODEL
 
 logger = logging.getLogger(__name__)
 
-_DATA_DIR = Path(__file__).parent.parent.parent / "data"
-_CHROMA_DIR = _DATA_DIR / "chroma_db"
-_KNOWLEDGE_DIR = _DATA_DIR / "knowledge"
+_embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL)
+_vectorstores: dict[str, Chroma] = {}
+_sources: dict[str, "CollectionSource"] = {}
 
-SIMPLE_KNOWLEDGE_DIR = "data/knowledge"
 
-CHUNK_SIZE = 400
-CHUNK_OVERLAP = 60
+@runtime_checkable
+class CollectionSource(Protocol):
+    """One named Chroma collection: how to build it and how well it fits a question."""
 
-_embeddings = OllamaEmbeddings(model="nomic-embed-text")
-#_embeddings = OpenAIEmbeddings(model="text-embedding-3-small")  # TODO: make this configurable if additional models are added in the future
-_vectorstore: Chroma | None = None
+    name: str
+
+    def load(self) -> list[Document]:
+        """Return the documents to index for this collection."""
+        ...
+
+    def score(self, question: str) -> int:
+        """Routing score for a question; 0 means "no opinion"."""
+        ...
+
+
+# ---------------------------------------------------------------------------
+# Registry
+# ---------------------------------------------------------------------------
+
+def register_source(source: CollectionSource) -> None:
+    """Make a collection buildable and routable. Call once per source at import time."""
+    _sources[source.name] = source
+
+
+def registered_sources() -> list[CollectionSource]:
+    return list(_sources.values())
+
+
+def registered_collections() -> list[str]:
+    return sorted(_sources)
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _open_existing() -> Chroma:
-    """Open the persisted ChromaDB collection without rebuilding it."""
-    return Chroma(persist_directory=str(_CHROMA_DIR), embedding_function=_embeddings, collection_name="knowledge")
+def _get_client() -> Any:
+    return chromadb.PersistentClient(path=str(CHROMA_DIR))
 
 
-def _build_from_knowledge() -> Chroma:
-    """Scan the knowledge directory for .txt/.md files, split, embed and persist to the vector store.
+def _open_existing(collection: str) -> Chroma:
+    return Chroma(
+        persist_directory=str(CHROMA_DIR),
+        embedding_function=_embeddings,
+        collection_name=collection,
+    )
 
-    Documents are split on ## Markdown headers, then further chunked with configurable chunk size and overlap.  
-    Each chunk inherits category and filename metadata from its source file.  
-    Raises FileNotFoundError if the knowledge directory is missing and ValueError if no eligible files are found inside it.
-    """
-    if not _KNOWLEDGE_DIR.exists():
-        raise FileNotFoundError(
-            f"Knowledge directory not found at {_KNOWLEDGE_DIR}. "
-            "Add .txt or .md files before building the vector store."
+
+def _build_collection(collection: str) -> Chroma:
+    source = _sources.get(collection)
+    if source is None:
+        raise ValueError(
+            f"No source registered for collection {collection!r}. Registered: {registered_collections()}"
         )
-    
-    docs = []
-    for file in _KNOWLEDGE_DIR.rglob("*"):
-        if file.suffix.lower() not in {".txt", ".md"}:
-            continue
-        try:
-            loaded = TextLoader(str(file), encoding="utf-8").load()
-        except Exception as exc:
-            logger.warning("Skipping %s: %s", file, exc)
-            continue
-        for doc in loaded:
-            doc.metadata = {"category": file.parent.name, "filename": file.name}
-        docs.extend(loaded)
 
-    if not docs:
-        raise ValueError("No documents found in the knowledge directory. Add .txt or .md files to backend/data/knowledge/.")
-    else:
-        splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[("##", "product")])
+    chunks = source.load()
+    if not chunks:
+        raise ValueError(f"Source {collection!r} produced no documents.")
 
-        chunks = []
-        for doc in docs:
-            split_docs = splitter.split_text(doc.page_content)
-            for chunk in split_docs:
-                chunk.metadata = {**doc.metadata, **chunk.metadata}
-                chunks.append(chunk)
-
-    # chunks = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP).split_documents(docs) # Optional: use this instead of MarkdownHeaderTextSplitter if you want to split on character count instead of headers
-
-    logger.info("Building vector store — %d chunk(s) from %d file(s)", len(chunks), len(docs))
-    return Chroma.from_documents(chunks, embedding=_embeddings, persist_directory=str(_CHROMA_DIR), collection_name="knowledge")
+    logger.info("Building %s collection — %d chunk(s)", collection, len(chunks))
+    return Chroma.from_documents(
+        chunks,
+        embedding=_embeddings,
+        persist_directory=str(CHROMA_DIR),
+        collection_name=collection,
+    )
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-def get_vectorstore() -> Chroma | None:
-    """Return the in-memory singleton without triggering any I/O.
-
-    Returns None if the store has not been loaded or built yet.
-    Call load_vectorstore() or load_or_build_vectorstore() first.
-    """
-    return _vectorstore
+def get_vectorstore(collection: str = DEFAULT_COLLECTION) -> Chroma | None:
+    """Return an already-loaded collection without any I/O, or None."""
+    return _vectorstores.get(collection)
 
 
-def load_vectorstore() -> Chroma | None:
-    """Load the existing ChromaDB into the module-level singleton.
+def load_vectorstore(collection: str = DEFAULT_COLLECTION) -> Chroma | None:
+    """Load a persisted collection into the cache. Returns None if it does not exist yet."""
+    if collection in _vectorstores:
+        return _vectorstores[collection]
 
-    Returns the singleton immediately if already loaded.  Returns None and logs a warning if the database directory does not exist
-    the application can still start without a knowledge base.
-    Call load_or_build_vectorstore() to create it.
-    """
-    global _vectorstore
-    if _vectorstore is not None:
-        return _vectorstore
-
-    if not _CHROMA_DIR.exists():
-        logger.warning("ChromaDB not found at %s — knowledge base unavailable. Run load_or_build_vectorstore() to create it.", _CHROMA_DIR)
+    if not CHROMA_DIR.exists():
+        logger.warning("ChromaDB not found at %s — collection %s unavailable.", CHROMA_DIR, collection)
         return None
 
     try:
-        _vectorstore = _open_existing()
-        logger.info("Vector store loaded from %s", _CHROMA_DIR)
-        return _vectorstore
+        if collection not in {item.name for item in _get_client().list_collections()}:
+            logger.warning("Collection %s not found in ChromaDB at %s", collection, CHROMA_DIR)
+            return None
+
+        _vectorstores[collection] = _open_existing(collection)
+        logger.info("Vector store collection %s loaded from %s", collection, CHROMA_DIR)
+        return _vectorstores[collection]
     except Exception as exc:
-        logger.error("Failed to load ChromaDB: %s", exc)
+        logger.error("Failed to load ChromaDB collection %s: %s", collection, exc)
         return None
 
 
-def load_or_build_vectorstore() -> Chroma:
-    """Return the vector store, loading or building it as needed.
+def load_or_build_vectorstore(collection: str = DEFAULT_COLLECTION) -> Chroma:
+    """Return a collection, loading it from disk or building it from its registered source."""
+    loaded = load_vectorstore(collection)
+    if loaded is not None:
+        return loaded
 
-    Checks the in-memory singleton first, then the persisted database on disk,
-    then falls back to building from the knowledge directory.  Raises on failure.
-    """
-    global _vectorstore
-    if _vectorstore is not None:
-        return _vectorstore
-
-    if _CHROMA_DIR.exists():
-        try:
-            _vectorstore = _open_existing()
-            logger.info("Vector store loaded from %s", _CHROMA_DIR)
-            return _vectorstore
-        except Exception as exc:
-            logger.warning("Could not open existing ChromaDB (%s) — rebuilding.", exc)
-
-    _vectorstore = _build_from_knowledge()
-    logger.info("Vector store built and saved to %s", _CHROMA_DIR)
-    return _vectorstore
+    _vectorstores[collection] = _build_collection(collection)
+    logger.info("Vector store collection %s built and saved to %s", collection, CHROMA_DIR)
+    return _vectorstores[collection]
 
 
-def rebuild_vectorstore() -> Chroma:
-    """Wipe the persisted database and rebuild the vector store from the knowledge directory.
+def list_vectorstore_collections() -> list[str]:
+    """Return the collection names currently persisted on disk."""
+    if not CHROMA_DIR.exists():
+        return []
 
-    Resets the in-memory singleton, deletes the database from disk, then rebuilds.
-    Use this after adding, editing, or removing knowledge files.
-    """
-    global _vectorstore
-    import shutil
+    try:
+        return sorted(item.name for item in _get_client().list_collections())
+    except Exception as exc:
+        logger.error("Failed to list ChromaDB collections: %s", exc)
+        return []
 
-    if _vectorstore is not None:
-        try:
-            _vectorstore._client.reset()  # release Chroma file handles
-        except Exception:
-            pass
-        _vectorstore = None
 
-    if _CHROMA_DIR.exists():
-        shutil.rmtree(_CHROMA_DIR)
-        logger.info("Deleted old ChromaDB at %s", _CHROMA_DIR)
+def rebuild_vectorstore(collection: str | None = None) -> Chroma:
+    """Rebuild one registered collection, or every registered collection when None."""
+    targets = tuple(registered_collections()) if collection is None else (collection,)
+    if not targets:
+        raise ValueError("No collection sources registered.")
 
-    _vectorstore = _build_from_knowledge()
-    logger.info("Vector store rebuilt and saved to %s", _CHROMA_DIR)
-    return _vectorstore
+    for target in targets:
+        cached = _vectorstores.pop(target, None)
+        if cached is not None:
+            try:
+                cached._client.reset()  # release Chroma file handles
+            except Exception:
+                pass
+
+    if CHROMA_DIR.exists():
+        client = _get_client()
+        for target in targets:
+            try:
+                client.delete_collection(name=target)
+                logger.info("Deleted old ChromaDB collection %s at %s", target, CHROMA_DIR)
+            except Exception:
+                logger.debug("Collection %s did not exist before rebuild", target)
+
+    for target in targets:
+        _vectorstores[target] = _build_collection(target)
+        logger.info("Vector store collection %s rebuilt and saved to %s", target, CHROMA_DIR)
+
+    return _vectorstores[targets[0]]

@@ -12,8 +12,11 @@ from langchain_core.messages import ToolMessage
 from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.types import Command
 
+from ...db.chroma_store import load_vectorstore
+from ...db.rag import query_knowledge
+from ...db.baloto import BALOTO_COLLECTION, suggest_numbers
 from ...search.static import query_static_search
-from ...search.linkedin import get_recent_jobs
+from ...search.linkedin import get_recent_jobs, HOURS_OLD, MAX_JOB_LIMIT
 from ..retrieval.state import RetrievalState, RetrievalDocument
 from ...retrieval.schemas import RetrievalResult
 from ...retrieval.service import retrieval_engine
@@ -96,7 +99,66 @@ def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCa
 
 
 @tool
-def retrieve_job_postings(query: str, location: str, remote_job: bool, limit: int, hours_old: int, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+def retrieve_baloto_results(query: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+    """Retrieve Baloto results only from the dedicated Baloto vector collection.
+        Use it for Baloto draws, dates, winning numbers, history, and month-based result questions.
+    Args:
+        query: The Baloto query.
+        tool_call_id: The unique identifier for the tool call.
+    Returns:
+        A Command containing only Baloto retrieval results.
+    """
+    logger.info("Retrieve_baloto_results tool called")
+    results = query_knowledge(question=query, collection=BALOTO_COLLECTION)
+    formatted = format_results(query=query, results=results, stage=1, next_stage=-1)
+
+    return Command(update={"retrieval": [formatted], "messages": [ToolMessage(content=f"Verified Baloto Context - Retrieved {len(results)} document{'s' if len(results) != 1 else ''}.", tool_call_id=tool_call_id)]})
+
+
+@tool
+def suggest_baloto_numbers(
+    tool_call_id: Annotated[str, InjectedToolCallId],
+    window: int = 100,
+    half_life: float = 50.0,
+    strategy: str = "positional",
+    pool_size: int = 3,
+    cold_weight: float = 0.5,
+) -> Command:
+    """Compute Baloto numbers for the next draw from the historical behaviour of every number.
+        Use it when the user asks which numbers to play, for a prediction, or for the hottest or most overdue numbers.
+        The result contains a deterministic ticket plus, per position, the runner-up candidates you may swap in.
+        Never invent numbers: only use numbers present in the returned candidate lists.
+    Args:
+        tool_call_id: The unique identifier for the tool call.
+        window: How many of the most recent draws to analyse. 0 means the whole history. Default 100.
+        half_life: Number of draws after which an older draw counts half as much. 0 disables recency weighting. Default 50.
+        strategy: "positional" and "overall" pick the most frequent (hot) numbers, "cold" picks the most overdue ones, "hybrid" blends hot and cold. Cold and hybrid need a large window, use 0 for the full history.
+        pool_size: How many alternative numbers to return per position. Default 3.
+        cold_weight: Only used by "hybrid". Share of the score coming from the overdue ranking, between 0.0 and 1.0. Default 0.5.
+    Returns:
+        A Command containing the deterministic ticket, the candidate pools, what the scores mean and the analysed draw range as JSON.
+    """
+    logger.info("Suggest baloto numbers tool called")
+
+    vectorstore = load_vectorstore(BALOTO_COLLECTION)
+    if vectorstore is None:
+        content = "The Baloto history is unavailable, so no numbers can be computed."
+    else:
+        result = suggest_numbers(
+            vectorstore,
+            window=max(0, min(window, 5000)),
+            half_life=max(0.0, min(half_life, 5000.0)),
+            strategy=strategy if strategy in {"positional", "overall", "cold", "hybrid"} else "positional",
+            pool_size=max(1, min(pool_size, 5)),
+            cold_weight=max(0.0, min(cold_weight, 1.0)),
+        )
+        content = json.dumps(result, indent=2, ensure_ascii=False)
+
+    return Command(update={"messages": [ToolMessage(content=content, tool_call_id=tool_call_id)]})
+
+
+@tool
+def retrieve_job_postings(query: str, location: str, tool_call_id: Annotated[str, InjectedToolCallId], remote_job: bool = False, limit: int = MAX_JOB_LIMIT, hours_old: int = HOURS_OLD) -> Command:
     """Retrieves job postings from LinkedIn. Use it if you need to search for recent job postings. It returns the last 'limit' job postings for the given query, location, and remote status.
         It is a slow tool that may take a few seconds to return results, but it is very comprehensive and it is updated.
         Consider data could be incomplete or missing, specially location.
@@ -113,7 +175,7 @@ def retrieve_job_postings(query: str, location: str, remote_job: bool, limit: in
     logger.info("Retrieve job postings tool called")
 
     jobs = get_recent_jobs(keyword=query, location=location, remote=remote_job, limit=limit, hours_old=hours_old)
-    formatted = json.dumps(jobs, indent=2, ensure_ascii=False)
+    formatted = json.dumps(jobs, indent=2, ensure_ascii=False) if jobs else "No job postings returned by LinkedIn for this search. Do not invent any."
 
     return Command(update={"messages": [ToolMessage(content=formatted, tool_call_id=tool_call_id)]})
 
