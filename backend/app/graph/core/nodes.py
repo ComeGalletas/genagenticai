@@ -7,18 +7,17 @@ from langdetect import DetectorFactory, LangDetectException, detect_langs
 from babel import Locale
 
 
-from ..judge import state
 from ...retrieval.schemas import RetrievalResult
 # from attrs import asdict
 
 from langchain_ollama import ChatOllama
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.types import Command
 
+from ...config import CHAT_MODEL
 from .state import State
 from .tools import get_current_time, read_webpage, retrieve_baloto_results, retrieve_information, retrieve_job_postings, suggest_baloto_numbers
 from .system_prompt import SYSTEM_PROMPT
-from ..judge.system_prompt import JUDGE_SYSTEM_PROMPT
 
 DetectorFactory.seed = 0  # langdetect samples randomly by default; a fixed seed makes it deterministic
 MIN_DETECTABLE_CHARS = 12
@@ -26,15 +25,12 @@ MIN_LANGUAGE_CONFIDENCE = 0.85
 _LANGUAGE_NOISE = re.compile(r"```.*?```|`[^`]*`|https?://\S+|[\d_/\\<>{}\[\]]+", re.DOTALL)
 
 SYSTEM_MESSAGE = SystemMessage(content=SYSTEM_PROMPT)
-JUDGE_SYSTEM_MESSAGE = SystemMessage(content=JUDGE_SYSTEM_PROMPT)
 
 logger = logging.getLogger(__name__)
 
 tools = [get_current_time, read_webpage, retrieve_information, retrieve_baloto_results, retrieve_job_postings, suggest_baloto_numbers]
 _llm = ChatOllama(
-    #model="qwen3.8", 
-    model="qwen3.6",
-    #model="qwen3:30b-a3b",
+    model=CHAT_MODEL,  # set CHAT_MODEL in .env to switch (e.g. qwen3:14b fits a 16 GB GPU entirely)
     temperature=0.1
 )
 llm_with_tools = _llm.bind_tools(tools)
@@ -163,42 +159,3 @@ def chatbot(state: State) -> Command:
         
     #print("LLM response:", response)
     return Command(update={"messages": [response]})
-
-
-def judge_response(state: State) -> Command:
-    """Review the chatbot final text and return a clear HTML response for the user."""
-    logger.debug("Entering judge node.")
-    #logger.info("Judge State: %s", state)
-
-
-    last_ai = next((m for m in reversed(state["messages"]) if getattr(m, "type", "") == "ai"), None)
-    if last_ai is None:
-        logger.warning("Judge node skipped: no AI response found.")
-        return Command(update={})
-
-    candidate_response = _extract_text(getattr(last_ai, "content", ""))
-    if not candidate_response.strip():
-        logger.warning("Judge node skipped: chatbot response was empty.")
-        return Command(update={})
-
-    start_time = time.perf_counter()
-    reviewed = cast(AIMessage, _llm.invoke([JUDGE_SYSTEM_MESSAGE, HumanMessage(content=candidate_response)]))
-    elapsed = time.perf_counter() - start_time
-    logger.info("Judge response completed in %.3f seconds.", elapsed)
-
-
-    #print("candidate response:", candidate_response)
-    #print("JUDGE response:", _extract_text(reviewed.content))
-
-    return Command(
-        update={
-            "messages": [reviewed],
-            "judge": {
-                "original_response": candidate_response,
-                "judged_response": _extract_text(reviewed.content),
-            },
-        }
-    )
-
-
-

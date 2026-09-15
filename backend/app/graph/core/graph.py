@@ -11,7 +11,8 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 
 from .state import State
-from .nodes import chatbot, detect_language, judge_response, tools as llm_tools
+from .nodes import chatbot, detect_language, tools as llm_tools
+from ..judge.node import judge_response
 from ..retrieval.nodes import retrieve_information_node, finish_retrieval_node
 from .router import route_chatbot, retrieval_router
 
