@@ -253,3 +253,21 @@ body {
     max-height: fit-content;
   }
 }
+
+/* Streaming draft: raw markdown tokens shown as they arrive, replaced by HTML on completion */
+.message .draft {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message .status {
+  margin-top: 0.35rem;
+  font-size: 0.85em;
+  opacity: 0.65;
+  font-style: italic;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.message .draft + .status {
+  margin-top: 0.5rem;
+}

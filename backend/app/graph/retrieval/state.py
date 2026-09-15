@@ -1,9 +1,6 @@
 from typing import Any, Literal
 
-from attr import field
-from typing_extensions import TypedDict, NotRequired
-
-from ...retrieval.schemas import RetrievalResult
+from typing_extensions import NotRequired, TypedDict
 
 RetrievalStatus = Literal[
     "NO_MATCH",
@@ -22,6 +19,8 @@ class RetrievalDocument(TypedDict):
 class RetrievalState(TypedDict):
     """State used only by the retrieval functionalities."""
     retrieval_query: NotRequired[str]
+    # Id of the tool call that produced this entry; ties the entry to a conversation turn.
+    tool_call_id: NotRequired[str]
     # Control
     retrieval_status: RetrievalStatus | None
     retrieval_stage: NotRequired[int | None]

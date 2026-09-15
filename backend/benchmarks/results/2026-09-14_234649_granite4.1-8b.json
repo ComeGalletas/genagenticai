@@ -1,0 +1,183 @@
+{
+  "timestamp": "2026-09-14_234649",
+  "chat_model": "granite4.1:8b",
+  "judge_model": "granite4.1:8b",
+  "git_commit": "03b430e",
+  "python": "3.12.0",
+  "results": [
+    {
+      "id": "greeting",
+      "category": "no-tool",
+      "question": "hi there!",
+      "thread": "chat",
+      "total_s": 0.36,
+      "node_times_s": {
+        "prepare_turn": 0.0,
+        "chatbot": 0.35,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "finalize"
+      ],
+      "tools_used": [],
+      "retrieval_stage": null,
+      "retrieval_docs": 0,
+      "judge": null,
+      "judge_attempts": 0,
+      "verdicts": [],
+      "user_language": "unknown",
+      "reply_text": "Hello nya~ How can I assist you today?",
+      "reply_html": "<p>Hello nya~ How can I assist you today?</p>",
+      "error": null
+    },
+    {
+      "id": "smalltalk",
+      "category": "no-tool",
+      "question": "thanks, that's all for now!",
+      "thread": "chat",
+      "total_s": 0.33,
+      "node_times_s": {
+        "prepare_turn": 0.18,
+        "chatbot": 0.15,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "finalize"
+      ],
+      "tools_used": [],
+      "retrieval_stage": null,
+      "retrieval_docs": 0,
+      "judge": null,
+      "judge_attempts": 0,
+      "verdicts": [],
+      "user_language": "English",
+      "reply_text": "Sure thing nya~ Feel free to ask if anything else comes up!",
+      "reply_html": "<p>Sure thing nya~ Feel free to ask if anything else comes up!</p>",
+      "error": null
+    },
+    {
+      "id": "static-game",
+      "category": "static",
+      "question": "Which studio made Hollow Knight?",
+      "thread": "static",
+      "total_s": 1.69,
+      "node_times_s": {
+        "prepare_turn": 0.0,
+        "chatbot": 1.22,
+        "tools": 0.0,
+        "judge": 0.46,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 2,
+        "tools": 1,
+        "judge": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "tools",
+        "chatbot",
+        "judge",
+        "finalize"
+      ],
+      "tools_used": [
+        "retrieve_information"
+      ],
+      "retrieval_stage": 0,
+      "retrieval_docs": 1,
+      "judge": {
+        "passed": true,
+        "grounded": true,
+        "needs_more_info": false,
+        "issues": [],
+        "error": null
+      },
+      "judge_attempts": 0,
+      "verdicts": [
+        {
+          "passed": true,
+          "grounded": true,
+          "needs_more_info": false,
+          "issues": [],
+          "error": null
+        }
+      ],
+      "user_language": "English",
+      "reply_text": "Hollow Knight was created by Team Cherry.\nSource: The game's official website (hollowknight.com) lists Team Cherry as the developer.\nAdditional note: Team Cherry is an Australian indie studio known for its challenging 2D action‑adventure games.\nAnswer: Team Cherry made Hollow Knight.\nNya~",
+      "reply_html": "<p>Hollow Knight was created by <strong>Team Cherry</strong>.</p>\n<p><strong>Source:</strong> The game's official website (<a href=\"https://www.hollowknight.com/\">hollowknight.com</a>) lists Team Cherry as the developer.</p>\n<p><strong>Additional note:</strong> Team Cherry is an Australian indie studio known for its challenging 2D action‑adventure games.</p>\n<p><strong>Answer:</strong> Team Cherry made Hollow Knight.</p>\n<p><em>Nya~</em></p>",
+      "error": null
+    },
+    {
+      "id": "static-framework",
+      "category": "static",
+      "question": "What is LangGraph used for in Python?",
+      "thread": "static",
+      "total_s": 4.88,
+      "node_times_s": {
+        "prepare_turn": 0.0,
+        "chatbot": 4.32,
+        "tools": 0.0,
+        "judge": 0.55,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 2,
+        "tools": 1,
+        "judge": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "tools",
+        "chatbot",
+        "judge",
+        "finalize"
+      ],
+      "tools_used": [
+        "retrieve_information"
+      ],
+      "retrieval_stage": 0,
+      "retrieval_docs": 1,
+      "judge": {
+        "passed": true,
+        "grounded": true,
+        "needs_more_info": false,
+        "issues": [],
+        "error": null
+      },
+      "judge_attempts": 0,
+      "verdicts": [
+        {
+          "passed": true,
+          "grounded": true,
+          "needs_more_info": false,
+          "issues": [],
+          "error": null
+        }
+      ],
+      "user_language": "English",
+      "reply_text": "LangGraph is a Python library designed for building stateful, multi‑step, and multi‑actor large‑language‑model (LLM) applications.\nKey points about its usage:\n\n\nGraph‑Based Workflows:\n\nNodes represent individual LLM calls or processing steps (e.g., question understanding, data retrieval, decision making).\nEdges define the flow between nodes, allowing you to chain operations, pass data, and manage state across steps.\n\n\n\nState Management:\n\nLangGraph maintains the state of the application across multiple interactions, so you can persist context, store intermediate results, and resume workflows without losing information.\n\n\n\nMulti‑Actor Support:\n\nYou can define multiple “agents” or services that operate concurrently or sequentially, each with its own node in the graph. This is useful for orchestrating complex dialogues, coordinating between different LLM models, or integrating external APIs.\n\n\n\nPython Integration:\n\nThe library provides a clean Python API (langgraph.Graph, langgraph.Node, etc.) that lets you define your workflow declaratively, then execute it with a single call (graph.run(...)).\nIt works well with popular LLM providers such as OpenAI, Anthropic, and Cohere through the LangChain ecosystem, enabling seamless chaining of LLM calls with custom logic.\n\n\n\nTypical Use Cases:\n\nBuilding conversational agents that require multi‑turn reasoning (e.g., a travel planner that first fetches weather data, then suggests activities).\nCreating decision‑making pipelines where each step validates or refines the output of the previous one (e.g., a financial advisor that checks risk tolerance, then recommends investments).\nImplementing complex workflows that involve external services (databases, APIs) alongside LLM inference.\n\n\n\nIn summary: LangGraph lets Python developers design and execute sophisticated, stateful LLM workflows by defining a directed graph of processing nodes, handling state across steps, and supporting multiple interacting agents—all with a straightforward, declarative API.\nNya~",
+      "reply_html": "<p><strong>LangGraph</strong> is a Python library designed for building <strong>stateful, multi‑step, and multi‑actor large‑language‑model (LLM) applications</strong>.</p>\n<p>Key points about its usage:</p>\n<ul>\n<li>\n<p><strong>Graph‑Based Workflows:</strong></p>\n<ul>\n<li>Nodes represent individual LLM calls or processing steps (e.g., question understanding, data retrieval, decision making).</li>\n<li>Edges define the flow between nodes, allowing you to chain operations, pass data, and manage state across steps.</li>\n</ul>\n</li>\n<li>\n<p><strong>State Management:</strong></p>\n<ul>\n<li>LangGraph maintains the state of the application across multiple interactions, so you can persist context, store intermediate results, and resume workflows without losing information.</li>\n</ul>\n</li>\n<li>\n<p><strong>Multi‑Actor Support:</strong></p>\n<ul>\n<li>You can define multiple “agents” or services that operate concurrently or sequentially, each with its own node in the graph. This is useful for orchestrating complex dialogues, coordinating between different LLM models, or integrating external APIs.</li>\n</ul>\n</li>\n<li>\n<p><strong>Python Integration:</strong></p>\n<ul>\n<li>The library provides a clean Python API (<code>langgraph.Graph</code>, <code>langgraph.Node</code>, etc.) that lets you define your workflow declaratively, then execute it with a single call (<code>graph.run(...)</code>).</li>\n<li>It works well with popular LLM providers such as OpenAI, Anthropic, and Cohere through the <strong>LangChain</strong> ecosystem, enabling seamless chaining of LLM calls with custom logic.</li>\n</ul>\n</li>\n<li>\n<p><strong>Typical Use Cases:</strong></p>\n<ul>\n<li>Building conversational agents that require multi‑turn reasoning (e.g., a travel planner that first fetches weather data, then suggests activities).</li>\n<li>Creating decision‑making pipelines where each step validates or refines the output of the previous one (e.g., a financial advisor that checks risk tolerance, then recommends investments).</li>\n<li>Implementing complex workflows that involve external services (databases, APIs) alongside LLM inference.</li>\n</ul>\n</li>\n</ul>\n<p><strong>In summary:</strong> LangGraph lets Python developers design and execute sophisticated, stateful LLM workflows by defining a directed graph of processing nodes, handling state across steps, and supporting multiple interacting agents—all with a straightforward, declarative API.</p>\n<p><em>Nya~</em></p>",
+      "error": null
+    }
+  ]
+}

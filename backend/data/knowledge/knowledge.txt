@@ -51,17 +51,20 @@ a query, find the stored documents whose vectors are nearest to the query vector
 
 ## Ollama
 Ollama is a tool for running open-source LLMs locally on your machine. This project uses Ollama
-for both chat generation (llama3.1) and embeddings (nomic-embed-text). Ollama must be running
-in the background before starting the backend server.
+for chat generation and judging (granite4.1:8b by default, configurable with CHAT_MODEL and
+JUDGE_MODEL) and for embeddings (nomic-embed-text). Ollama must be running in the background
+before starting the backend server.
 
 ## FastAPI
 FastAPI is a modern Python web framework for building APIs. It uses Python type hints to
 automatically validate request/response bodies (via Pydantic) and generate OpenAPI docs at /docs.
 
 ## Project Architecture
-- backend/app/main.py: FastAPI app, CORS, /api/chat endpoint.
-- backend/app/graph.py: LangGraph StateGraph with chatbot and tools nodes.
-- backend/app/tools.py: Tool definitions (static_google_search, knowledge_search).
-- backend/app/rag.py: ChromaDB vector store setup and document retrieval.
-- backend/data/knowledge.txt: The local knowledge file indexed by ChromaDB.
-- frontend/src/App.jsx: React chat UI that posts messages to the backend API.
+- backend/app/server/api.py: FastAPI app, CORS, /api/chat and streaming /api/chat/stream endpoints.
+- backend/app/graph/core/graph.py: LangGraph StateGraph with prepare_turn, chatbot, tools, judge, revise and finalize nodes.
+- backend/app/graph/core/tools.py: Tool definitions (retrieve_information, retrieve_baloto_results, suggest_baloto_numbers, retrieve_job_postings, read_webpage, get_current_time).
+- backend/app/graph/judge/: The judge that checks each answer against the retrieved context and sends failures back for one revision.
+- backend/app/retrieval/: The staged retrieval engine (static index, then local RAG, then DuckDuckGo web search).
+- backend/app/db/: ChromaDB vector store setup, collection sources and document retrieval.
+- backend/data/knowledge/: The local knowledge files indexed by ChromaDB.
+- frontend/src/App.jsx: React chat UI that streams replies from the backend API.

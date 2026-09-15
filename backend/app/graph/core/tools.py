@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import json
-from dataclasses import asdict
 from typing import Annotated
 from datetime import datetime
 
@@ -15,7 +14,6 @@ from langgraph.types import Command
 from ...db.chroma_store import load_vectorstore
 from ...db.rag import query_knowledge
 from ...db.baloto import BALOTO_COLLECTION, suggest_numbers
-from ...search.static import query_static_search
 from ...search.linkedin import get_recent_jobs, HOURS_OLD, MAX_JOB_LIMIT
 from ..retrieval.state import RetrievalState, RetrievalDocument
 from ...retrieval.schemas import RetrievalResult
@@ -44,7 +42,13 @@ def _to_document(result: RetrievalResult) -> RetrievalDocument:
     }
 
 
-def format_results(query: str, results: list[RetrievalResult], stage: int = 0, next_stage: int = 0) -> RetrievalState | None:
+def format_results(
+    query: str,
+    results: list[RetrievalResult],
+    stage: int = 0,
+    next_stage: int = 0,
+    tool_call_id: str | None = None,
+) -> RetrievalState | None:
     """Format the retrieval results into a structured RetrievalState dictionary and adds extra metadata for the LLM to process.
     If no results are found, the status is set to "NO_MATCH" and None is returned.
     It does not know about the stages of the retrieval process, it just formats the results and adds the stage and next_stage metadata for the LLM to process.
@@ -70,6 +74,8 @@ def format_results(query: str, results: list[RetrievalResult], stage: int = 0, n
             _to_document(doc) for doc in results
         ],
     )
+    if tool_call_id:
+        payload["tool_call_id"] = tool_call_id
 
     return payload
 
@@ -80,22 +86,33 @@ def format_results(query: str, results: list[RetrievalResult], stage: int = 0, n
 
 @tool
 def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCallId], stage: int = 0) -> Command:
-    """Retrieves information from a knowledge base and web search functions.
-        It is a very slow tool that may take a few seconds to return results, but it is very comprehensive and it is updated.
-        There are stages to it starting from 0. The higher the stage, the more sources are searched so it becomes significantly slower.
-        If the next_stage is negative, it means there is no more stages to search and the tool will return an empty result set.
-    Args.
+    """Searches for information about the query. One call tries the sources in order and stops at the
+        first one that returns results: stage 0 is a small curated index (video games, films, dev
+        frameworks), stage 1 is the local knowledge base (NVIDIA RTX 50 GPUs, LangGraph), stage 2 is a
+        live web search. Local stages answer in milliseconds; the web stage takes a few seconds.
+    Args:
         query: The search query.
         tool_call_id: The unique identifier for the tool call.
-        stage: The stage of the search. Default is 0. Stage 0 is a basic static search, stage 1 is a knowledge database search, and stage 2 is a web search.
+        stage: The first stage to try. Default 0. Pass 2 to escalate to a live web search when an
+            earlier call with the same query returned nothing useful. A higher stage is only honored
+            after the cheaper stages were tried for that query.
     Returns:
-        A Command object for the LLM containing the static search results as a JSON string with a list of RetrievalResult objects, or empty if no results.
+        A Command that stores the retrieved documents as verified context and tells you how many were found.
     """
-    logger.info("Retrieve_information tool called")
-    results, next_stage  = retrieval_engine.run_stage(query=query, stage=stage)
-    formatted = format_results(query=query, results=results, stage=stage, next_stage=next_stage)
+    start_stage = retrieval_engine.resolve_start_stage(query, stage)
+    logger.info("Retrieve_information tool called | requested_stage=%d start_stage=%d", stage, start_stage)
+    results, last_stage, next_stage = retrieval_engine.run_pipeline(query=query, start_stage=start_stage)
+    formatted = format_results(query=query, results=results, stage=last_stage, next_stage=next_stage, tool_call_id=tool_call_id)
 
-    return Command(update={"retrieval": [formatted], "messages": [ToolMessage(content=f"Verified Retrieval Context - Retrieved {len(results)} document{'s' if len(results) != 1 else ''}.", tool_call_id=tool_call_id)]})
+    count = len(results)
+    if count:
+        note = f"Verified Retrieval Context - Retrieved {count} document{'s' if count != 1 else ''} (stage {last_stage})."
+    elif next_stage == -1:
+        note = "No documents found in any source, including the live web. Do not invent an answer."
+    else:
+        note = f"No documents found up to stage {last_stage}. Call again with stage={next_stage} to search further."
+
+    return Command(update={"retrieval": [formatted], "messages": [ToolMessage(content=note, tool_call_id=tool_call_id)]})
 
 
 @tool
@@ -110,7 +127,7 @@ def retrieve_baloto_results(query: str, tool_call_id: Annotated[str, InjectedToo
     """
     logger.info("Retrieve_baloto_results tool called")
     results = query_knowledge(question=query, collection=BALOTO_COLLECTION)
-    formatted = format_results(query=query, results=results, stage=1, next_stage=-1)
+    formatted = format_results(query=query, results=results, stage=1, next_stage=-1, tool_call_id=tool_call_id)
 
     return Command(update={"retrieval": [formatted], "messages": [ToolMessage(content=f"Verified Baloto Context - Retrieved {len(results)} document{'s' if len(results) != 1 else ''}.", tool_call_id=tool_call_id)]})
 
@@ -211,32 +228,16 @@ def read_webpage(url: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> 
     logger.info("Read webpage tool called for url: %s", url)
 
     downloaded = fetch_url(url)
-    result = None
     if not downloaded:
-        result = "Failed to fetch page"        
+        logger.warning("Read webpage: fetch failed for %s", url)
+        return Command(update={"messages": [ToolMessage(content=f"Failed to fetch page: {url}", tool_call_id=tool_call_id)]})
 
     result = trafilatura.extract(
         downloaded,
-        include_formatting=True, 
+        include_formatting=True,
         include_links=True,
         include_images=False,
         output_format="markdown"
     )
 
     return Command(update={"messages": [ToolMessage(content=str(result if result else "No content extracted"), tool_call_id=tool_call_id)]})
-
-
-@tool
-def static_google_search(query: str, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
-    """ Returns a fixed set of results for certain queries, without making external network requests. 
-        It is fast to access but it has very few data and it is not updated. 
-        Use it if you need to know the answer to a question that requires external knowledge or recent information.
-    Args:
-        query: The search query.
-    Returns:
-        A Command object for the LLM containing the static search results as a JSON string with a list of RetrievalResult objects, or empty if no results.
-    """
-    logger.info("Google static search tool called")
-    results = query_static_search(str(query))
-
-    return Command(update={"messages": [ToolMessage(content=str(results), tool_call_id=tool_call_id)]})

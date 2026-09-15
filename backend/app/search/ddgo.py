@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import httpx
@@ -9,6 +10,7 @@ import trafilatura
 from bs4 import BeautifulSoup
 from ddgs import DDGS
 
+from ..config import WEB_FETCH_TIMEOUT, WEB_FETCH_WORKERS
 from ..retrieval.schemas import RetrievalResult, RetrievalStage
 
 logger = logging.getLogger(__name__)
@@ -18,9 +20,15 @@ logging.getLogger("trafilatura").setLevel(logging.ERROR)
 MAX_RESULTS = 5        # Maximum number of search results to return per query
 MAX_CONTENT_CHARS = 1000  # Hard cap on extracted text to avoid oversized payloads
 MIN_WORDS = 40
+BLOCKED_STATUS_CODES = frozenset({401, 403, 429, 503})  # "you look like a bot"; retried with trafilatura's fetcher
 
 
-def fetch_webpage(url: str, fallback_content: str = "", timeout: int = 15) -> tuple[str, dict[str, Any]]:
+def fetch_webpage(
+    url: str,
+    fallback_content: str = "",
+    timeout: float = WEB_FETCH_TIMEOUT,
+    max_chars: int = MAX_CONTENT_CHARS,
+) -> tuple[str, dict[str, Any]]:
     """Download a webpage and extract its readable plain-text content.
 
     Attempts to fetch the URL with ``httpx``, then runs ``trafilatura`` to
@@ -34,7 +42,8 @@ def fetch_webpage(url: str, fallback_content: str = "", timeout: int = 15) -> tu
         url: The URL to download.  An empty string skips the request entirely.
         fallback_content: Text to return when the page cannot be fetched or
             parsed. Defaults to ``""``.
-        timeout: HTTP request timeout in seconds.  Defaults to ``15``.
+        timeout: HTTP request timeout in seconds.  Defaults to ``WEB_FETCH_TIMEOUT``.
+        max_chars: Cap on the extracted text. Defaults to ``MAX_CONTENT_CHARS``.
     Returns:
         A two-element tuple, (text, metadata) for the webpage.
     """
@@ -50,14 +59,21 @@ def fetch_webpage(url: str, fallback_content: str = "", timeout: int = 15) -> tu
             )},
         )
 
-        if response.status_code != 200:
-            metadata["status_code"] = response.status_code
-            return fallback_content, metadata
-        if "text/html" not in response.headers.get("Content-Type", ""):
-            metadata["content_type"] = response.headers.get("Content-Type")
-            return fallback_content, metadata
-
-        html = response.text
+        html = ""
+        if response.status_code in BLOCKED_STATUS_CODES:
+            # Some sites (Wikipedia among them) refuse httpx but accept trafilatura's fetcher.
+            downloaded = trafilatura.fetch_url(url)
+            if downloaded:
+                html = downloaded
+                metadata["fetched_via"] = "trafilatura"
+        if not html:
+            if response.status_code != 200:
+                metadata["status_code"] = response.status_code
+                return fallback_content, metadata
+            if "text/html" not in response.headers.get("Content-Type", ""):
+                metadata["content_type"] = response.headers.get("Content-Type")
+                return fallback_content, metadata
+            html = response.text
         text = trafilatura.extract(html, include_comments=False, include_tables=True, include_formatting=False)
 
         # Secondary fallback: BeautifulSoup when trafilatura yields nothing, html source gets extracted as plain text
@@ -70,7 +86,7 @@ def fetch_webpage(url: str, fallback_content: str = "", timeout: int = 15) -> tu
 
             if word_count >= MIN_WORDS:
                 metadata["content_source"] = "webpage"
-                return text[:MAX_CONTENT_CHARS], metadata
+                return text[:max_chars], metadata
 
     except Exception as e:
         metadata["error"] = str(e)
@@ -78,7 +94,7 @@ def fetch_webpage(url: str, fallback_content: str = "", timeout: int = 15) -> tu
     return fallback_content, metadata
 
 
-def query_ddu_google_search(query: str, max_results: int = MAX_RESULTS) -> list[RetrievalResult]:
+def query_web_search(query: str, max_results: int = MAX_RESULTS) -> list[RetrievalResult]:
     """Search DuckDuckGo and enrich each result with full webpage content.
 
     Issues a DuckDuckGo text search via ``ddgs.DDGS``, then calls
@@ -102,18 +118,24 @@ def query_ddu_google_search(query: str, max_results: int = MAX_RESULTS) -> list[
         logger.exception("DuckDuckGo search failed")
         return []
 
-    retrieval_results: list[RetrievalResult] = []
-    for result in results:
-        title   = result.get("title", "Untitled")
-        url     = result.get("href", "")
-        snippet = result.get("body", "")
+    if not results:
+        logger.info("DuckDuckGo returned no results for %r", query)
+        return []
 
-        content, meta = fetch_webpage(url=url, fallback_content=snippet)
+    # Fetch every result page concurrently; the stage then costs about one slow page, not the sum.
+    def _enrich(result: dict) -> tuple[str, dict]:
+        return fetch_webpage(url=result.get("href", ""), fallback_content=result.get("body", ""), timeout=WEB_FETCH_TIMEOUT)
+
+    with ThreadPoolExecutor(max_workers=max(1, min(WEB_FETCH_WORKERS, len(results)))) as pool:
+        enriched = list(pool.map(_enrich, results))
+
+    retrieval_results: list[RetrievalResult] = []
+    for result, (content, meta) in zip(results, enriched):
         retrieval_results.append(RetrievalResult(
-            title=title,
+            title=result.get("title", "Untitled"),
             content=content,
-            source=url,
-            stage=RetrievalStage.GOOGLE,
+            source=result.get("href", ""),
+            stage=RetrievalStage.WEB,
             metadata=meta,
             confidence=0.92,  # DuckDuckGo results are considered highly relevant
         ))

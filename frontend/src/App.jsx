@@ -26,7 +26,16 @@ function renderWithLinks(text) {
   );
 }
 
-function MessageContent({ content }) {
+function MessageContent({ content, streaming, status }) {
+  if (streaming) {
+    // Draft: raw markdown tokens as they arrive, swapped for sanitized HTML on the final event.
+    return (
+      <>
+        {content ? <p className="draft">{content}</p> : null}
+        {status ? <p className="status">{status}</p> : null}
+      </>
+    );
+  }
   if (HTML_TAG_REGEX.test(content)) {
     const clean = DOMPurify.sanitize(content);
     return <div className="html-content" dangerouslySetInnerHTML={{ __html: clean }} />;
@@ -35,6 +44,30 @@ function MessageContent({ content }) {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+/** Parse a fetch body as Server-Sent Events, calling onEvent({event, ...data}) per frame. */
+async function readSse(response, onEvent) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let separator;
+    while ((separator = buffer.indexOf("\n\n")) !== -1) {
+      const frame = buffer.slice(0, separator);
+      buffer = buffer.slice(separator + 2);
+      const dataLine = frame.split("\n").find((line) => line.startsWith("data:"));
+      if (!dataLine) continue;
+      try {
+        onEvent(JSON.parse(dataLine.slice(5).trim()));
+      } catch {
+        // malformed frame: ignore and keep reading
+      }
+    }
+  }
+}
 
 /** Generate a random session ID that persists for the lifetime of this page load. */
 function generateThreadId() {
@@ -90,32 +123,64 @@ function App() {
     const content = input.trim();
     if (!content) return;
 
-    const nextMessages = [...messages, { role: "user", content }];
-    setMessages(nextMessages);
+    setMessages((prev) => [...prev, { role: "user", content }]);
     setInput("");
     setIsLoading(true);
 
+    const body = JSON.stringify({ message: content, thread_id: threadId.current });
+    const headers = { "Content-Type": "application/json" };
+
+    // Draft assistant message that the stream fills in; replaced by the final HTML.
+    let draftIndex = -1;
+    setMessages((prev) => {
+      draftIndex = prev.length;
+      return [...prev, { role: "assistant", content: "", streaming: true, status: "Thinking…" }];
+    });
+    const updateDraft = (patch) =>
+      setMessages((prev) => prev.map((m, i) => (i === draftIndex ? { ...m, ...patch } : m)));
+
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content, thread_id: threadId.current }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed with ${response.status}`);
+      let finalHtml = null;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/chat/stream`, { method: "POST", headers, body });
+        if (!response.ok || !response.body) {
+          throw new Error(`Stream request failed with ${response.status}`);
+        }
+        await readSse(response, (event) => {
+          switch (event.event) {
+            case "status":
+              updateDraft({ status: event.text });
+              break;
+            case "delta":
+              setMessages((prev) =>
+                prev.map((m, i) => (i === draftIndex ? { ...m, content: m.content + event.text, status: "" } : m))
+              );
+              break;
+            case "reset":
+              updateDraft({ content: "" });
+              break;
+            case "final":
+              finalHtml = event.html;
+              break;
+            case "error":
+              throw new Error(event.message);
+            default:
+              break;
+          }
+        });
+      } catch (streamError) {
+        // Streaming unavailable (older backend, proxy buffering, network): fall back to one-shot.
+        console.warn("Streaming failed, falling back to /api/chat:", streamError);
+        updateDraft({ content: "", status: "Thinking…" });
+        const response = await fetch(`${API_BASE_URL}/api/chat`, { method: "POST", headers, body });
+        if (!response.ok) {
+          throw new Error(`Request failed with ${response.status}`);
+        }
+        finalHtml = (await response.json()).reply;
       }
-
-      const data = await response.json();
-      setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      updateDraft({ content: finalHtml ?? "", streaming: false, status: "" });
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `I hit an error: ${error.message}`,
-        },
-      ]);
+      updateDraft({ content: `I hit an error: ${error.message}`, streaming: false, status: "" });
     } finally {
       setIsLoading(false);
     }
@@ -138,15 +203,13 @@ function App() {
 
         <div className="messages">
           {messages.map((message, index) => (
-            <article key={`${message.role}-${index}`} className={`message ${message.role}`}>
-              <MessageContent content={message.content} />
+            <article
+              key={`${message.role}-${index}`}
+              className={`message ${message.role}${message.streaming ? " loading" : ""}`}
+            >
+              <MessageContent content={message.content} streaming={message.streaming} status={message.status} />
             </article>
           ))}
-          {isLoading && (
-            <article className="message assistant loading">
-              <p>Thinking...</p>
-            </article>
-          )}
           <div ref={bottomRef} />
         </div>
 

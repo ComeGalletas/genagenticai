@@ -19,3 +19,8 @@ class JudgeVerdict(BaseModel):
         default_factory=list,
         description="Short, concrete problems with the answer. Empty when the answer passes.",
     )
+    unsupported_links: list[str] = Field(
+        default_factory=list,
+        description="Links cited in the answer whose page is unreachable or does not support the claim "
+        "the link is attached to. Copy each URL exactly as it appears in the answer.",
+    )

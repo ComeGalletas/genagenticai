@@ -1,4 +1,3 @@
-from enum import StrEnum
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -7,7 +6,7 @@ from typing import Any
 class RetrievalStage:
     STATIC: str = "query_static_search"
     RAG: str = "query_knowledge"
-    GOOGLE: str = "query_ddu_google_search"
+    WEB: str = "query_web_search"
 
 
 """Defines the structure of a retrieval result for LLM usage, including title, content, source URL, stage of retrieval, status, score, confidence, and additional metadata."""

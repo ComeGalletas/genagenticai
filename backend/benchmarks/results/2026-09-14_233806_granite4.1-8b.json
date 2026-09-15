@@ -1,0 +1,174 @@
+{
+  "timestamp": "2026-09-14_233806",
+  "chat_model": "granite4.1:8b",
+  "judge_model": "granite4.1:8b",
+  "git_commit": "03b430e",
+  "python": "3.12.0",
+  "results": [
+    {
+      "id": "static-game",
+      "category": "static",
+      "question": "Which studio made Hollow Knight?",
+      "thread": "static",
+      "total_s": 2.04,
+      "node_times_s": {
+        "prepare_turn": 0.17,
+        "chatbot": 1.42,
+        "tools": 0.0,
+        "judge": 0.44,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 2,
+        "tools": 1,
+        "judge": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "tools",
+        "chatbot",
+        "judge",
+        "finalize"
+      ],
+      "tools_used": [
+        "retrieve_information"
+      ],
+      "retrieval_stage": 0,
+      "retrieval_docs": 1,
+      "judge": {
+        "passed": true,
+        "grounded": true,
+        "needs_more_info": false,
+        "issues": [],
+        "error": null
+      },
+      "judge_attempts": 0,
+      "verdicts": [
+        {
+          "passed": true,
+          "grounded": true,
+          "needs_more_info": false,
+          "issues": [],
+          "error": null
+        }
+      ],
+      "user_language": "English",
+      "reply_text": "Hollow Knight was created by Team Cherry.\nSource: The game's official website (hollowknight.com) lists Team Cherry as the developer.\nAdditional note: Team Cherry is an Australian indie studio known for its challenging 2D action‑adventure games.\nAnswer: Team Cherry made Hollow Knight.\nNyaa~",
+      "reply_html": "<p>Hollow Knight was created by <strong>Team Cherry</strong>.</p>\n<p><strong>Source:</strong> The game's official website (<a href=\"https://www.hollowknight.com/\">hollowknight.com</a>) lists Team Cherry as the developer.</p>\n<p><strong>Additional note:</strong> Team Cherry is an Australian indie studio known for its challenging 2D action‑adventure games.</p>\n<p><strong>Answer:</strong> Team Cherry made Hollow Knight.</p>\n<p><em>Nyaa~</em></p>",
+      "error": null
+    },
+    {
+      "id": "static-framework",
+      "category": "static",
+      "question": "What is LangGraph used for in Python?",
+      "thread": "static",
+      "total_s": 3.2,
+      "node_times_s": {
+        "prepare_turn": 0.0,
+        "chatbot": 2.77,
+        "tools": 0.0,
+        "judge": 0.42,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 2,
+        "tools": 1,
+        "judge": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "tools",
+        "chatbot",
+        "judge",
+        "finalize"
+      ],
+      "tools_used": [
+        "retrieve_information"
+      ],
+      "retrieval_stage": 0,
+      "retrieval_docs": 1,
+      "judge": {
+        "passed": true,
+        "grounded": true,
+        "needs_more_info": false,
+        "issues": [],
+        "error": null
+      },
+      "judge_attempts": 0,
+      "verdicts": [
+        {
+          "passed": true,
+          "grounded": true,
+          "needs_more_info": false,
+          "issues": [],
+          "error": null
+        }
+      ],
+      "user_language": "English",
+      "reply_text": "LangGraph is a Python library designed for building stateful, multi‑step, and multi‑actor large‑language‑model (LLM) applications.\nKey uses include:\n\nDefining workflows as graphs: Nodes represent individual LLM calls or processing steps, while edges encode the flow of data and control between them.\nManaging state across steps: LangGraph keeps track of variables, results, and context as the graph executes, allowing complex reasoning that spans multiple prompts.\nSupporting multiple actors: Different nodes can be assigned to distinct LLM agents (e.g., a “researcher” node and a “summarizer” node), enabling coordinated decision‑making.\nHandling conditional logic and loops: Edges can be conditional (e.g., “if result X, go to node Y”) and loops can be defined for iterative processes.\nIntegration with popular LLM providers: It works seamlessly with libraries such as LangChain, letting you plug in OpenAI, Anthropic, Cohere, etc., while abstracting the orchestration details.\n\nIn short, LangGraph lets developers orchestrate sophisticated, state‑aware LLM workflows in Python with minimal boilerplate.\nNyaa~",
+      "reply_html": "<p><strong>LangGraph</strong> is a Python library designed for building <strong>stateful, multi‑step, and multi‑actor large‑language‑model (LLM) applications</strong>.</p>\n<p>Key uses include:</p>\n<ul>\n<li><strong>Defining workflows as graphs</strong>: Nodes represent individual LLM calls or processing steps, while edges encode the flow of data and control between them.</li>\n<li><strong>Managing state across steps</strong>: LangGraph keeps track of variables, results, and context as the graph executes, allowing complex reasoning that spans multiple prompts.</li>\n<li><strong>Supporting multiple actors</strong>: Different nodes can be assigned to distinct LLM agents (e.g., a “researcher” node and a “summarizer” node), enabling coordinated decision‑making.</li>\n<li><strong>Handling conditional logic and loops</strong>: Edges can be conditional (e.g., “if result X, go to node Y”) and loops can be defined for iterative processes.</li>\n<li><strong>Integration with popular LLM providers</strong>: It works seamlessly with libraries such as <strong>LangChain</strong>, letting you plug in OpenAI, Anthropic, Cohere, etc., while abstracting the orchestration details.</li>\n</ul>\n<p>In short, LangGraph lets developers <strong>orchestrate sophisticated, state‑aware LLM workflows</strong> in Python with minimal boilerplate.</p>\n<p><em>Nyaa~</em></p>",
+      "error": null
+    },
+    {
+      "id": "ambiguous",
+      "category": "web",
+      "question": "what is expedition 33",
+      "thread": "amb",
+      "total_s": 11.31,
+      "node_times_s": {
+        "prepare_turn": 0.0,
+        "chatbot": 7.35,
+        "tools": 3.25,
+        "judge": 0.7,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 2,
+        "tools": 1,
+        "judge": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "tools",
+        "chatbot",
+        "judge",
+        "finalize"
+      ],
+      "tools_used": [
+        "retrieve_information"
+      ],
+      "retrieval_stage": 2,
+      "retrieval_docs": 6,
+      "judge": {
+        "passed": true,
+        "grounded": true,
+        "needs_more_info": false,
+        "issues": [],
+        "error": null
+      },
+      "judge_attempts": 0,
+      "verdicts": [
+        {
+          "passed": true,
+          "grounded": true,
+          "needs_more_info": false,
+          "issues": [],
+          "error": null
+        }
+      ],
+      "user_language": "English",
+      "reply_text": "Expedition 33 – Overview\n1. Space‑Station Mission (NASA/ISS)\n\nDates: September 16 – November 18, 2012\nCrew:\n\nCommander: Sunita Williams (NASA)\nFlight Engineers: Yuri Malenchenko (Roscosmos), Akihiko Hoshide (JAXA)\nAdditional crew (joined October 23 2012): Kevin Ford (NASA), Oleg Novitskiy (Roscosmos), Evgeny Tarelkin (Roscosmos)\n\n\nKey Activities:\n\nConducted extensive scientific research in micro‑gravity.\nHosted the first commercial cargo spacecraft launch by SpaceX (Dragon resupply mission).\nPerformed routine ISS maintenance and station‑systems upgrades.\n\n\n\n2. Video‑Game Title – Clair Obscur: Expedition 33\n\nRelease Date: April 24 2025 (simultaneous launch on PlayStation 5, Windows, Xbox Series X/S; day‑one on Xbox Game Pass).\nDeveloper &amp; Publisher: Sandfall Interactive (dev) / Kepler Interactive (pub).\nGenre &amp; Mechanics:\n\nTurn‑based RPG with real‑time parry &amp; dodge elements.\nThird‑person party control, exploration of a dark‑fantasy Belle Époque world.\n\n\nStoryline: The expedition seeks to destroy the Paintress, a being that erases everyone reaching a decreasing age threshold each year.\nCritical Reception: Received universal acclaim; topped multiple 2025 “best‑of” lists and won Game of the Year at The Game Awards 2025 (9 of 13 nominations).\nSales: As of April 2026, sold 8 million units.\n\n3. Summary\n\nExpedition 33 refers to two distinct but similarly named entities:\n\nISS Expedition 33 – a 2012 long‑duration crewed mission to the International Space Station, notable for scientific research and the first SpaceX cargo flight.\nClair Obscur: Expedition 33 – a 2025 critically‑acclaimed turn‑based RPG developed by Sandfall Interactive, set in a dark‑fantasy Belle Époque setting where a party must stop a world‑ending Paintress.\n\n\n\nBoth share the “Expedition 33” label, but they belong to different domains (space exploration vs. interactive entertainment).\nSources: Wikipedia entries for “Expedition 33” (ISS) and “Clair Obscur: Expedition 33” (video game), plus the game’s release page on Steam.\n\nQuick Facts (Bolded)\n\nISS Expedition 33: September 16 – November 18, 2012; crew of six; first SpaceX cargo mission.\nClair Obscur: Expedition 33: Released 24 Apr 2025; won Game of the Year at The Game Awards 2025; sold 8 M copies.\n\nFeel free to ask for more details on either mission or the video game!\nNyaa~",
+      "reply_html": "<p><strong>Expedition 33 – Overview</strong></p>\n<p><strong>1. Space‑Station Mission (NASA/ISS)</strong></p>\n<ul>\n<li><strong>Dates:</strong> September 16 – November 18, 2012</li>\n<li><strong>Crew:</strong>\n<ul>\n<li><strong>Commander:</strong> Sunita Williams (NASA)</li>\n<li><strong>Flight Engineers:</strong> Yuri Malenchenko (Roscosmos), Akihiko Hoshide (JAXA)</li>\n<li><strong>Additional crew (joined October 23 2012):</strong> Kevin Ford (NASA), Oleg Novitskiy (Roscosmos), Evgeny Tarelkin (Roscosmos)</li>\n</ul>\n</li>\n<li><strong>Key Activities:</strong>\n<ul>\n<li>Conducted extensive scientific research in micro‑gravity.</li>\n<li>Hosted the first commercial cargo spacecraft launch by <strong>SpaceX</strong> (Dragon resupply mission).</li>\n<li>Performed routine ISS maintenance and station‑systems upgrades.</li>\n</ul>\n</li>\n</ul>\n<p><strong>2. Video‑Game Title – <em>Clair Obscur: Expedition 33</em></strong></p>\n<ul>\n<li><strong>Release Date:</strong> April 24 2025 (simultaneous launch on PlayStation 5, Windows, Xbox Series X/S; day‑one on Xbox Game Pass).</li>\n<li><strong>Developer &amp; Publisher:</strong> Sandfall Interactive (dev) / Kepler Interactive (pub).</li>\n<li><strong>Genre &amp; Mechanics:</strong>\n<ul>\n<li>Turn‑based RPG with <strong>real‑time parry &amp; dodge</strong> elements.</li>\n<li>Third‑person party control, exploration of a dark‑fantasy Belle Époque world.</li>\n</ul>\n</li>\n<li><strong>Storyline:</strong> The expedition seeks to destroy the <strong>Paintress</strong>, a being that erases everyone reaching a decreasing age threshold each year.</li>\n<li><strong>Critical Reception:</strong> Received universal acclaim; topped multiple 2025 “best‑of” lists and won <strong>Game of the Year</strong> at The Game Awards 2025 (9 of 13 nominations).</li>\n<li><strong>Sales:</strong> As of April 2026, sold <strong>8 million units</strong>.</li>\n</ul>\n<p><strong>3. Summary</strong></p>\n<ul>\n<li><strong>Expedition 33</strong> refers to two distinct but similarly named entities:\n<ol>\n<li><strong>ISS Expedition 33</strong> – a 2012 long‑duration crewed mission to the International Space Station, notable for scientific research and the first SpaceX cargo flight.</li>\n<li><strong>Clair Obscur: Expedition 33</strong> – a 2025 critically‑acclaimed turn‑based RPG developed by Sandfall Interactive, set in a dark‑fantasy Belle Époque setting where a party must stop a world‑ending Paintress.</li>\n</ol>\n</li>\n</ul>\n<p>Both share the “Expedition 33” label, but they belong to different domains (space exploration vs. interactive entertainment).</p>\n<p><em>Sources:</em> Wikipedia entries for “Expedition 33” (ISS) and “Clair Obscur: Expedition 33” (video game), plus the game’s release page on Steam.</p>\n<hr>\n<p><strong>Quick Facts (Bolded)</strong></p>\n<ul>\n<li><strong>ISS Expedition 33:</strong> September 16 – November 18, 2012; crew of six; first SpaceX cargo mission.</li>\n<li><strong>Clair Obscur: Expedition 33:</strong> Released 24 Apr 2025; won Game of the Year at The Game Awards 2025; sold 8 M copies.</li>\n</ul>\n<p>Feel free to ask for more details on either mission or the video game!</p>\n<p><em>Nyaa~</em></p>",
+      "error": null
+    }
+  ]
+}

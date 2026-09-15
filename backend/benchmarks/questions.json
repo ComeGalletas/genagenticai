@@ -1,0 +1,20 @@
+[
+  {"id": "greeting",          "category": "no-tool",   "thread": "chat",   "question": "hi there!"},
+  {"id": "smalltalk",         "category": "no-tool",   "thread": "chat",   "question": "thanks, that's all for now!"},
+  {"id": "time",              "category": "tool-time", "thread": "time",   "question": "What time is it right now?"},
+  {"id": "static-game",       "category": "static",    "thread": "static", "question": "Which studio made Hollow Knight?"},
+  {"id": "static-framework",  "category": "static",    "thread": "static", "question": "What is LangGraph used for in Python?"},
+  {"id": "rag-gpu",           "category": "rag",       "thread": "gpu",    "question": "How much VRAM does the RTX 5090 have?"},
+  {"id": "rag-gpu-followup",  "category": "rag",       "thread": "gpu",    "question": "And what is its TDP?"},
+  {"id": "rag-langgraph",     "category": "rag",       "thread": "lg",     "question": "What does MemorySaver do in LangGraph?"},
+  {"id": "web-current",       "category": "web",       "thread": "web",    "question": "What is the latest version of the Claude AI model?"},
+  {"id": "web-general",       "category": "web",       "thread": "web2",   "question": "Who won the 2024 Nobel Prize in Physics?"},
+  {"id": "unknown",           "category": "web",       "thread": "unk",    "question": "What is the release date of the Nintendo Switch 3?"},
+  {"id": "ambiguous",         "category": "web",       "thread": "amb",    "question": "what is expedition 33"},
+  {"id": "ambiguous-spinoff", "category": "verify",    "thread": "amb",    "question": "Does the video game have any sequels or spinoffs?"},
+  {"id": "fake-entry",        "category": "verify",    "thread": "fake",   "question": "What is Clair Obscur: Writers Revenge?"},
+  {"id": "baloto-results",    "category": "baloto",    "thread": "baloto", "question": "What were the Baloto winning numbers on 2026-08-10?"},
+  {"id": "baloto-suggest",    "category": "baloto",    "thread": "baloto", "question": "Which Baloto numbers should I play next?"},
+  {"id": "jobs",              "category": "jobs",      "thread": "jobs",   "question": "Find software engineer jobs in Bogota, Colombia posted in the last week."},
+  {"id": "spanish",           "category": "language",  "thread": "es",     "question": "¿Cuánta memoria de video tiene la RTX 5090?"}
+]

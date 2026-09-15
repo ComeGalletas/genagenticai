@@ -26,6 +26,7 @@ dependencies = [
     "trafilatura>=2.1.0",
     "ddgs>=9.14.4",
     "langdetect>=1.0.9",
+    "markdown-it-py>=3.0,<5.0",  # reply markdown -> HTML in graph/core/formatting.py
 ]
 
 # Currently only for development

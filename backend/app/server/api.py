@@ -5,11 +5,15 @@ import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+import json
+from typing import Iterator
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 
-from ..graph.core.graph import run_agent
+from ..graph.core.graph import run_agent, stream_agent_events
 from ..db.chroma_store import load_vectorstore
 from ..server.schemas import ChatRequest, ChatResponse
 
@@ -94,3 +98,31 @@ def chat(request: ChatRequest) -> ChatResponse:
     except Exception as exc:
         logger.error("Chat error — thread_id=%r: %s", request.thread_id, exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+def _sse(event: dict) -> str:
+    """Format one event as a Server-Sent Events frame."""
+    return f"event: {event['event']}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
+def _sse_stream(request: ChatRequest) -> Iterator[str]:
+    start = time.perf_counter()
+    for event in stream_agent_events(request.message, thread_id=request.thread_id):
+        yield _sse(event)
+    logger.info("Chat stream completed in %.2fs — thread_id=%r", time.perf_counter() - start, request.thread_id)
+
+
+@app.post("/api/chat/stream")
+def chat_stream(request: ChatRequest) -> StreamingResponse:
+    """Streaming chat endpoint (Server-Sent Events over a POST).
+
+    Frames: status (progress hint), delta (chatbot tokens, markdown), reset (discard the draft),
+    final (sanitized HTML reply), done, or error. The client should replace whatever it has
+    drafted with the `final` HTML.
+    """
+    logger.info("Chat stream request — thread_id=%r message=%r", request.thread_id, request.message[:120])
+    return StreamingResponse(
+        _sse_stream(request),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

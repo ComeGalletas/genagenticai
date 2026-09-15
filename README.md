@@ -1,13 +1,13 @@
 # Generative Agentic AI
 
-A learning-focused agentic AI workspace built with **LangGraph**, **FastAPI**, and **React**. The agent uses a locally running **Ollama** LLM (llama3.1 / qwen3) and decides at runtime which tool to invoke to answer a question:
+A learning-focused agentic AI workspace built with **LangGraph**, **FastAPI**, and **React**. The agent uses a locally running **Ollama** LLM (granite4.1:8b by default, any tool-capable model works) and decides at runtime which tool to invoke to answer a question:
 
-- **RAG (ChromaDB)** — searches a local vector knowledge base using Ollama embeddings
-- **Static search** — returns deterministic results from a curated in-code index
-- **Google Search** — falls back to a live Google API query when local knowledge is insufficient
-- **Job Posting Search** — searches LinkedIn for recent job postings using user queries, location and remote options
+- **Staged retrieval** — one tool call searches a curated in-code index, then a local **ChromaDB** knowledge base (Ollama embeddings), then the live web via **DuckDuckGo**, stopping at the first decisive result
+- **Baloto lottery** — draw history from a dedicated Chroma collection plus hot/cold/hybrid number suggestions
+- **Job Posting Search** — recent LinkedIn postings by query, location and remote option
+- **Web page reader** and **current time**
 
-The graph routes between these tools automatically, making it a good hands-on example of agentic decision-making without relying on paid cloud LLMs.
+Every tool-backed answer is checked by a **judge** pass (same model, structured verdict) and sent back for one revision if it is ungrounded, then rendered from markdown to sanitized HTML and **streamed** to the React client. No paid cloud LLMs involved.
 
 ## Project structure
 
@@ -18,7 +18,7 @@ The graph routes between these tools automatically, making it a good hands-on ex
 
 ### Prerequisites
 
-- [Ollama](https://ollama.com/) running locally with `llama3.1` (or `qwen3.6`) pulled
+- [Ollama](https://ollama.com/) running locally with `granite4.1:8b` and `nomic-embed-text` pulled (or set `CHAT_MODEL` to another tool-capable model)
 - Python 3.12+
 - Node.js 18+
 
@@ -31,7 +31,7 @@ python -m venv .venv
 .venv\Scripts\activate # Optional
 
 pip install -e .
-#copy .env.example .env
+copy .env.example .env
 ```
 
 Start the server:
@@ -56,8 +56,12 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. The frontend calls `http://localhost:8000/api/chat` by default.  
-Override with `VITE_API_BASE_URL` in a `.env` file if needed.
+Open `http://localhost:5173`. The frontend streams replies from `http://localhost:8000/api/chat/stream`
+(Server-Sent Events) and falls back to the one-shot `POST /api/chat` if streaming is unavailable.
+Override the base URL with `VITE_API_BASE_URL` in a `.env` file if needed.
+
+Models are configured in `backend/.env` (`CHAT_MODEL`, `JUDGE_MODEL`); see `rework_journal.md` for the
+current architecture, measurements, and the benchmark harness in `backend/benchmarks/`.
 
 ---
 

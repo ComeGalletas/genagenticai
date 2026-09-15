@@ -1,7 +1,9 @@
-class CVAnalysisState(TypedDict):
-    """State used only by the CV analysis graph."""
+"""Planned CV-analysis subgraph. Only the state schema exists; nothing is wired into the main graph yet."""
+from typing_extensions import NotRequired, TypedDict
 
-    messages: list
+
+class CVAnalysisState(TypedDict):
+    """State for matching a CV against job postings."""
 
     cv: str
     job_postings: list[str]
