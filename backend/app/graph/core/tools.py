@@ -15,7 +15,7 @@ from ...db.chroma_store import load_vectorstore
 from ...db.rag import query_knowledge
 from ...db.baloto import BALOTO_COLLECTION, suggest_numbers
 from ...search.linkedin import get_recent_jobs, HOURS_OLD, MAX_JOB_LIMIT
-from ..retrieval.state import RetrievalState, RetrievalDocument
+from ..retrieval.state import RETRIEVAL_ACK_PREFIX, RetrievalState, RetrievalDocument
 from ...retrieval.schemas import RetrievalResult
 from ...retrieval.service import retrieval_engine
 
@@ -106,7 +106,8 @@ def retrieve_information(query: str, tool_call_id: Annotated[str, InjectedToolCa
 
     count = len(results)
     if count:
-        note = f"Verified Retrieval Context - Retrieved {count} document{'s' if count != 1 else ''} (stage {last_stage})."
+        note = (f"{RETRIEVAL_ACK_PREFIX} {count} document{'s' if count != 1 else ''} retrieved for query {query!r} "
+                f"(stage {last_stage}). They are listed in the retrieved context for the current question.")
     elif next_stage == -1:
         note = "No documents found in any source, including the live web. Do not invent an answer."
     else:
@@ -129,7 +130,12 @@ def retrieve_baloto_results(query: str, tool_call_id: Annotated[str, InjectedToo
     results = query_knowledge(question=query, collection=BALOTO_COLLECTION)
     formatted = format_results(query=query, results=results, stage=1, next_stage=-1, tool_call_id=tool_call_id)
 
-    return Command(update={"retrieval": [formatted], "messages": [ToolMessage(content=f"Verified Baloto Context - Retrieved {len(results)} document{'s' if len(results) != 1 else ''}.", tool_call_id=tool_call_id)]})
+    count = len(results)
+    if count:
+        note = f"{RETRIEVAL_ACK_PREFIX} {count} Baloto document{'s' if count != 1 else ''} retrieved for query {query!r}."
+    else:
+        note = f"No Baloto documents found for query {query!r}. Do not invent draws or numbers."
+    return Command(update={"retrieval": [formatted], "messages": [ToolMessage(content=note, tool_call_id=tool_call_id)]})
 
 
 @tool

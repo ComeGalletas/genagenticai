@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.env
+logs/
+data/chroma_db/
+benchmarks/results/
+graph.png
+jobsresult_example.txt
+tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

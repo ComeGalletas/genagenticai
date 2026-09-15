@@ -425,3 +425,55 @@ Left alone on purpose (not broken, but worth a decision): the two tracked `*.egg
 - 2026-09-15: Judge context and turn scoping. Judge sees the recent conversation; verification and judge context are scoped to this turn's retrievals via `tool_call_id`; critique no longer asks to search again after a web search or to clarify; finalize note built from verification data only. Files: `app/graph/core/{router,tools,nodes}.py`, `app/graph/retrieval/state.py`, `app/graph/judge/{node,verify,critique,system_prompt}.py`, tests.
 - 2026-09-15: Link verification in the judge. Pages behind cited links and curated sources are fetched before the verdict; unverifiable links are stripped and unconfirmed claims are noted in the final reply. Files: `app/graph/judge/{verify,node,schema,state,critique,system_prompt}.py`, `app/graph/core/nodes.py`, `app/search/ddgo.py`, `app/config.py`, `tests/test_verify.py`, `benchmarks/questions.json`.
 - 2026-09-14: "what is expedition 33" fix. Static hits are decisive only on a full-name match; tentative hits no longer end the pipeline. Empty-revision fallback in `finalize`. Question set is now 16 rows. Files: `app/search/{static,static_data}.py`, `app/retrieval/engine.py`, `app/graph/core/{nodes,system_prompt}.py`, tests, `benchmarks/questions.json`.
+
+## Turn-scoped chatbot context — DONE 2026-09-15
+
+User-reported failure: after a question about one subject (cars), an unrelated question (food)
+sometimes came back with details from the previous search mixed in. Cause: the chatbot's retrieved
+context was built from the whole retrieval window (newest 3 entries, kept across turns on purpose
+for follow-ups), so the previous turn's documents were shown in full under the same "primary factual
+context" header as the new ones, with nothing tying either set to a question. The judge had already
+been scoped per turn; the chatbot had not.
+
+Changes:
+- `build_retrieval_context` (`core/nodes.py`) now uses `turn_retrievals`: only entries produced by
+  this turn's tool calls (revision searches after a critique included) are rendered in full, under a
+  header that quotes the current user question. Entries still in the window from earlier questions
+  become one line each (query and titles) under "Earlier searches (previous questions, not for this
+  one)" with an instruction to re-search rather than reuse them. When this turn made no retrieval
+  there is no context block at all, so small talk and the first call of a follow-up turn see nothing
+  stale.
+- Retrieval tools acknowledge with `RETRIEVAL_ACK_PREFIX` ("Retrieval context: N documents retrieved
+  for query '...' (stage S)") instead of "Verified Retrieval Context - Retrieved N documents", so the
+  history itself ties each result to its query and no longer calls web pages verified. The judge
+  skips acknowledgements by that prefix (`graph/retrieval/state.py`). An empty Baloto search now says
+  so explicitly instead of being skipped as an acknowledgement.
+- System prompt: retrieved documents are shown only for the current question; never carry facts from
+  an earlier search into a different subject; a follow-up ("its TDP", "that game") must name the
+  subject in a new self-contained query.
+- `RETRIEVAL_MAX_ENTRIES` comment explains why the window still spans turns (judge trusts its web
+  URLs, chatbot lists earlier queries) and that only the current turn is ever shown in full.
+- Benchmark: `switch` category (VRAM question, then Colombian ajiaco, then "how much power does that
+  graphics card draw?") with a `forbid` list per question; the runner records `leaked` terms and
+  prints a `leak` column.
+- 7 new unit tests (`test_turn_state.py` BuildRetrievalContextTests, judge/chatbot agreement in
+  `test_judge_context.py`); 100 pass.
+
+Results on granite 8b (three runs of the switch thread on the new code, one on the old):
+
+| Row | Old code | New code | Query the model used |
+|---|---|---|---|
+| switch-gpu | 1.9 s pass | 2.2 to 3.7 s pass | `RTX 5090 VRAM` |
+| switch-food | 9.9 s pass | 7.3 to 8.5 s pass, no leak | `Colombian ajiaco ingredients` (web) |
+| switch-back | 2.7 s pass | 2.8 s pass, no leak | `RTX 5090 power consumption TDP` (re-search, RAG) |
+| rag-gpu-followup | 1.5 s (baseline) | 3.7 s pass | `RTX 5090 TDP` (re-search instead of reusing the window) |
+
+The old code did not leak on this particular run either; the mixing is intermittent, which is why
+the benchmark keeps the `leak` column for future runs. The follow-up cost is one extra cheap local
+search (about 0.1 s) plus a slightly longer chatbot call.
+
+Seen during the run, unrelated to this change: `rag-langgraph` failed once. The query contained the
+full name "LangGraph", which is a decisive static hit, so the pipeline stopped at stage 0 with the
+one-line curated snippet and the model invented MemorySaver features. The RAG stage that holds the
+MemorySaver section was never reached. Worth revisiting the early-exit rule for curated entries that
+only describe a product in general terms.

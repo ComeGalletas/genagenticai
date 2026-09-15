@@ -8,11 +8,12 @@ from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings
 
+from ..config import OLLAMA_BASE_URL
 from .settings import CHROMA_DIR, DEFAULT_COLLECTION, EMBEDDING_MODEL
 
 logger = logging.getLogger(__name__)
 
-_embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL)
+_embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL, base_url=OLLAMA_BASE_URL)
 _vectorstores: dict[str, Chroma] = {}
 _sources: dict[str, "CollectionSource"] = {}
 

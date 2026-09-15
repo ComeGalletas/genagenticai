@@ -35,7 +35,7 @@ def _turn(*extra_messages, call_id: str = "call-now"):
     return [
         HumanMessage("current question"),
         AIMessage(content="", tool_calls=[{"name": "retrieve_information", "args": {"query": "x"}, "id": call_id}]),
-        ToolMessage(content="Verified Retrieval Context - Retrieved 1 document (stage 0).", tool_call_id=call_id),
+        ToolMessage(content="Retrieval context: 1 document retrieved for query 'x' (stage 0). They are listed in the retrieved context for the current question.", tool_call_id=call_id),
         *extra_messages,
     ]
 
@@ -152,7 +152,7 @@ class FetchAndFormatTests(unittest.TestCase):
 class DownstreamTests(unittest.TestCase):
     def test_context_marks_unverified_sources(self) -> None:
         state = {
-            "messages": [HumanMessage("q")],
+            "messages": _turn(),
             "retrieval": [_retrieval(_doc(RetrievalStage.STATIC, "https://wroters.com/", title="WR"),
                                      _doc(RetrievalStage.STATIC, "https://ok.example/x", title="OK"))],
             "judge": {"passed": False, "unverified_sources": ["https://wroters.com"]},

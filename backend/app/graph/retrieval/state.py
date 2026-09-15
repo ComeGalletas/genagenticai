@@ -2,6 +2,11 @@ from typing import Any, Literal
 
 from typing_extensions import NotRequired, TypedDict
 
+# Retrieval tools acknowledge with a ToolMessage that starts with this prefix; the documents
+# themselves reach the chatbot through the retrieved-context block and the judge through its own
+# context section, so both skip messages carrying it to avoid listing the same thing twice.
+RETRIEVAL_ACK_PREFIX = "Retrieval context:"
+
 RetrievalStatus = Literal[
     "NO_MATCH",
     "FOUND"

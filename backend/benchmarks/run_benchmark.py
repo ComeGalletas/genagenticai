@@ -80,6 +80,9 @@ def run_question(item: dict, thread_prefix: str) -> dict:
         for call in (getattr(message, "tool_calls", None) or [])
     })
     reply_html = state.get("final_response") or ""
+    reply_text = _TAG.sub("", reply_html).strip()
+    # Terms from an earlier question in the same thread that must not bleed into this reply.
+    leaked = [term for term in item["forbid"] if term.lower() in reply_text.lower()] if item.get("forbid") else None
 
     return {
         "id": item["id"],
@@ -103,7 +106,8 @@ def run_question(item: dict, thread_prefix: str) -> dict:
         "judge_attempts": state.get("judge_attempts", 0),
         "verdicts": verdicts,
         "user_language": state.get("user_language"),
-        "reply_text": _TAG.sub("", reply_html).strip(),
+        "leaked": leaked,
+        "reply_text": reply_text,
         "reply_html": reply_html,
         "error": error,
     }
@@ -119,6 +123,13 @@ def _judge_label(result: dict) -> str:
     return label
 
 
+def _leak_label(result: dict) -> str:
+    """'-' when the question had no forbidden terms, 'none' when none leaked, else the leaked terms."""
+    if result.get("leaked") is None:
+        return "-"
+    return ", ".join(result["leaked"]) if result["leaked"] else "none"
+
+
 def summary_markdown(run: dict, baseline: dict | None) -> str:
     base_by_id = {r["id"]: r for r in (baseline or {}).get("results", [])}
     lines = [
@@ -126,8 +137,8 @@ def summary_markdown(run: dict, baseline: dict | None) -> str:
         "",
         f"chat={run['chat_model']} judge={run['judge_model']} commit={run['git_commit']}",
         "",
-        "| id | category | total s | chatbot s | tools s | judge s | stage | tools used | judge | " + ("delta s | " if baseline else "") + "reply |",
-        "|---|---|---|---|---|---|---|---|---|" + ("---|" if baseline else "") + "---|",
+        "| id | category | total s | chatbot s | tools s | judge s | stage | tools used | judge | leak | " + ("delta s | " if baseline else "") + "reply |",
+        "|---|---|---|---|---|---|---|---|---|---|" + ("---|" if baseline else "") + "---|",
     ]
     for r in run["results"]:
         nt = r["node_times_s"]
@@ -141,7 +152,7 @@ def summary_markdown(run: dict, baseline: dict | None) -> str:
         lines.append(
             f"| {r['id']} | {r['category']} | {r['total_s']} | {nt.get('chatbot', 0)} | {nt.get('tools', 0)} | "
             f"{nt.get('judge', 0)} | {r['retrieval_stage'] if r['retrieval_stage'] is not None else '-'} | "
-            f"{', '.join(r['tools_used']) or '-'} | {_judge_label(r)} | {delta}{reply} |"
+            f"{', '.join(r['tools_used']) or '-'} | {_judge_label(r)} | {_leak_label(r)} | {delta}{reply} |"
         )
     totals = [r["total_s"] for r in run["results"] if not r["error"]]
     if totals:
@@ -191,6 +202,8 @@ def main() -> None:
         result = run_question(item, thread_prefix)
         run["results"].append(result)
         status = f"ERROR {result['error']}" if result["error"] else f"{result['total_s']}s | stage={result['retrieval_stage']} | judge={_judge_label(result)}"
+        if result.get("leaked"):
+            status += f" | LEAK: {', '.join(result['leaked'])}"
         print(f"    -> {status}\n       {result['reply_text'][:120]}\n")
 
     RESULTS_DIR.mkdir(exist_ok=True)

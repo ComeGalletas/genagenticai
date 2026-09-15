@@ -20,7 +20,7 @@ def _search_turn(question: str, answer: str, call_id: str) -> list:
     return [
         HumanMessage(question),
         AIMessage(content="", tool_calls=[{"name": "retrieve_information", "args": {"query": "x"}, "id": call_id}]),
-        ToolMessage(content="Verified Retrieval Context - Retrieved 1 document (stage 1).", tool_call_id=call_id),
+        ToolMessage(content="Retrieval context: 1 document retrieved for query 'x' (stage 1). They are listed in the retrieved context for the current question.", tool_call_id=call_id),
         AIMessage(answer),
     ]
 
@@ -41,7 +41,7 @@ class FormatContextTests(unittest.TestCase):
         state = {"messages": _search_turn("VRAM?", "32 GB", "1"), "retrieval": [_retrieval("RTX 5090", "VRAM: 32 GB GDDR7")]}
         context = _format_context(state)
         self.assertIn("VRAM: 32 GB GDDR7", context)
-        self.assertNotIn("Verified Retrieval Context", context)
+        self.assertNotIn("Retrieval context:", context)
         self.assertNotIn("[tool output", context)
 
     def test_earlier_turn_documents_are_titles_only(self) -> None:
@@ -73,6 +73,21 @@ class FormatContextTests(unittest.TestCase):
         self.assertNotIn("Internal review", convo)     # critiques never appear
         self.assertTrue(web_searched_this_turn(state))
         self.assertEqual(_recent_conversation({"messages": [HumanMessage("first")]}), "(this is the first question of the conversation)")
+
+    def test_chatbot_and_judge_agree_on_this_turns_documents(self) -> None:
+        from app.graph.core.nodes import build_retrieval_context
+
+        state = {
+            "messages": _search_turn("cars?", "car answer", "cars") + _search_turn("food?", "food answer", "food"),
+            "retrieval": [_retrieval("Car page", "car content", tool_call_id="cars"),
+                          _retrieval("Food page", "food content", tool_call_id="food")],
+        }
+        judge_text = _format_context(state)
+        chatbot_text = build_retrieval_context(state).content
+        for text in (judge_text, chatbot_text):
+            self.assertIn("food content", text)
+            self.assertNotIn("car content", text)
+            self.assertIn("Car page", text)  # earlier turn: title only, for both readers
 
     def test_previous_turn_tool_outputs_are_excluded(self) -> None:
         state = {"messages": [

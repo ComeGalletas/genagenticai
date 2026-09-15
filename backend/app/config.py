@@ -23,6 +23,12 @@ USE_RETRIEVAL_PIPELINE_TOOL = os.getenv("USE_RETRIEVAL_PIPELINE_TOOL", "true").l
 # more than the judge call itself. Override JUDGE_MODEL only if both models fit together.
 CHAT_MODEL = os.getenv("CHAT_MODEL", "granite4.1:8b")
 JUDGE_MODEL = os.getenv("JUDGE_MODEL", CHAT_MODEL)
+# Where Ollama listens. None keeps the client default (OLLAMA_HOST env or localhost:11434); the
+# Docker stack sets http://host.docker.internal:11434 because Ollama runs on the host.
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL") or None
+# Browser origins allowed to call the API directly (comma separated). Behind the nginx proxy in the
+# Docker stack the browser never crosses origins, so this only matters for `npm run dev`.
+CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
 CHAT_KEEP_ALIVE = os.getenv("CHAT_KEEP_ALIVE", "10m")
 JUDGE_KEEP_ALIVE = os.getenv("JUDGE_KEEP_ALIVE", "10m")
 
@@ -37,7 +43,11 @@ CHAT_HISTORY_MAX_TOKENS = int(os.getenv("CHAT_HISTORY_MAX_TOKENS", "6000"))  # a
 # ---------------------------------------------------------------------------
 # Retrieval
 # ---------------------------------------------------------------------------
-RETRIEVAL_MAX_ENTRIES = int(os.getenv("RETRIEVAL_MAX_ENTRIES", "3"))  # newest retrieval tool results kept in state (0 = unbounded)
+# Newest retrieval tool results kept in state (0 = unbounded). The window spans turns on purpose:
+# the judge trusts web URLs from it, and the chatbot lists earlier entries as one line each so it
+# knows what was searched before. Only the current turn's entries are ever shown in full to the
+# chatbot; do not "fix" that by feeding the whole window back into the prompt.
+RETRIEVAL_MAX_ENTRIES = int(os.getenv("RETRIEVAL_MAX_ENTRIES", "3"))
 # One tool call runs the stages in order (static index -> local RAG -> web) and stops at the first
 # stage that yields at least RETRIEVAL_STOP_MIN_RESULTS *decisive* results.
 RETRIEVAL_STOP_MIN_RESULTS = int(os.getenv("RETRIEVAL_STOP_MIN_RESULTS", "1"))

@@ -17,9 +17,11 @@ from ...config import (
     JUDGE_MODEL,
     JUDGE_NUM_CTX,
     JUDGE_VERIFY_LINKS,
+    OLLAMA_BASE_URL,
 )
 from ..core.router import turn_messages, turn_retrievals, web_searched_this_turn
 from ..core.state import State
+from ..retrieval.state import RETRIEVAL_ACK_PREFIX
 from .critique import build_critique, is_critique
 from .schema import JudgeVerdict
 from .state import JudgeState
@@ -45,6 +47,7 @@ _judge_llm = ChatOllama(
     reasoning=False,
     num_ctx=JUDGE_NUM_CTX,
     keep_alive=JUDGE_KEEP_ALIVE,
+    base_url=OLLAMA_BASE_URL,
 )
 _judge = _judge_llm.with_structured_output(JudgeVerdict, method="json_schema")
 
@@ -131,7 +134,7 @@ def _format_context(state: State) -> str:
         if getattr(message, "type", "") != "tool":
             continue
         content = _extract_text(getattr(message, "content", "")).strip()
-        if not content or content.startswith("Verified Retrieval Context"):
+        if not content or content.startswith(RETRIEVAL_ACK_PREFIX):
             continue  # retrieval tools only acknowledge; their documents are listed above
         lines.append(f"[tool output: {getattr(message, 'name', None) or 'tool'}]")
         if len(content) > JUDGE_MAX_TOOL_CHARS:

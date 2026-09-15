@@ -63,5 +63,27 @@ Override the base URL with `VITE_API_BASE_URL` in a `.env` file if needed.
 Models are configured in `backend/.env` (`CHAT_MODEL`, `JUDGE_MODEL`); see `rework_journal.md` for the
 current architecture, measurements, and the benchmark harness in `backend/benchmarks/`.
 
+### Docker (frontend + backend, Ollama on the host)
+
+Prerequisites: Docker Desktop, and Ollama running on the host with the chat and embedding models
+pulled (`ollama pull granite4.1:8b`, `ollama pull nomic-embed-text`).
+
+```bash
+docker compose up --build
+```
+
+Open `http://localhost:5173`. nginx serves the built client and proxies `/api/` and `/health` to the
+backend container, which reaches Ollama at `host.docker.internal:11434`. The first start rebuilds the
+Chroma store into a named volume (a minute or two of embedding); later starts reuse it.
+
+```bash
+docker compose logs -f backend                 # agent logs
+REBUILD_ON_START=1 docker compose up backend   # force a store rebuild after editing data/knowledge
+docker compose down -v                         # stop and drop the Chroma and log volumes
+```
+
+Settings still come from `backend/.env`; `docker-compose.yml` only overrides the Ollama URL, CORS
+origins and data paths. See `docker_journal.md` for the design notes.
+
 ---
 

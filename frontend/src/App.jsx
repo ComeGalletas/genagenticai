@@ -43,7 +43,9 @@ function MessageContent({ content, streaming, status }) {
   return <p>{renderWithLinks(content)}</p>;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+// Unset: the dev server talks to the backend directly. Empty string (the Docker image): same-origin
+// relative URLs, which nginx proxies to the backend.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 /** Parse a fetch body as Server-Sent Events, calling onEvent({event, ...data}) per frame. */
 async function readSse(response, onEvent) {

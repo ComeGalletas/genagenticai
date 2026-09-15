@@ -1,0 +1,45 @@
+# Two containers, Ollama on the host. See docker_journal.md.
+#
+#   docker compose up --build            # first start rebuilds the Chroma store (needs Ollama + models)
+#   docker compose logs -f backend
+#   REBUILD_ON_START=1 docker compose up backend   # force a store rebuild
+#
+# Ollama must have the chat model and the embedding model pulled on the host
+# (defaults granite4.1:8b and nomic-embed-text; override in backend/.env).
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:8000
+      CHROMA_DIR: /app/data/chroma_db
+      KNOWLEDGE_DIR: /app/data/knowledge
+      REBUILD_ON_START: ${REBUILD_ON_START:-0}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - chroma_data:/app/data/chroma_db
+      - backend_logs:/app/logs
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 30s        # every probe is an access-log line in `compose logs backend`
+      timeout: 5s
+      retries: 10
+      start_period: 180s   # the first start embeds the knowledge files before serving
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  chroma_data:
+  backend_logs:

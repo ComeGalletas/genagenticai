@@ -16,5 +16,8 @@
   {"id": "baloto-results",    "category": "baloto",    "thread": "baloto", "question": "What were the Baloto winning numbers on 2026-08-10?"},
   {"id": "baloto-suggest",    "category": "baloto",    "thread": "baloto", "question": "Which Baloto numbers should I play next?"},
   {"id": "jobs",              "category": "jobs",      "thread": "jobs",   "question": "Find software engineer jobs in Bogota, Colombia posted in the last week."},
-  {"id": "spanish",           "category": "language",  "thread": "es",     "question": "¿Cuánta memoria de video tiene la RTX 5090?"}
+  {"id": "spanish",           "category": "language",  "thread": "es",     "question": "¿Cuánta memoria de video tiene la RTX 5090?"},
+  {"id": "switch-gpu",        "category": "switch",    "thread": "switch", "question": "How much VRAM does the RTX 5090 have?"},
+  {"id": "switch-food",       "category": "switch",    "thread": "switch", "question": "What are the main ingredients of a Colombian ajiaco?", "forbid": ["RTX", "VRAM", "NVIDIA", "GPU", "GDDR", "graphics card"]},
+  {"id": "switch-back",       "category": "switch",    "thread": "switch", "question": "And how much power does that graphics card draw?", "forbid": ["ajiaco", "potato", "chicken", "guascas", "soup"]}
 ]

@@ -10,10 +10,11 @@ from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langchain_core.messages.utils import count_tokens_approximately, trim_messages
 from langgraph.types import Command
 
-from ...config import CHAT_HISTORY_MAX_TOKENS, CHAT_KEEP_ALIVE, CHAT_MODEL, CHAT_NUM_CTX
+from ...config import CHAT_HISTORY_MAX_TOKENS, CHAT_KEEP_ALIVE, CHAT_MODEL, CHAT_NUM_CTX, OLLAMA_BASE_URL
+from ..judge.critique import is_critique
 from ..judge.verify import normalize_url, strip_links, unverified_note, unverified_sources_note
 from .formatting import render_reply
-from .router import turn_messages
+from .router import turn_messages, turn_retrievals, turn_tool_call_ids
 from .state import State
 from .tools import get_current_time, read_webpage, retrieve_baloto_results, retrieve_information, retrieve_job_postings, suggest_baloto_numbers
 from .system_prompt import SYSTEM_PROMPT
@@ -33,6 +34,7 @@ _llm = ChatOllama(
     temperature=0.1,
     num_ctx=CHAT_NUM_CTX,
     keep_alive=CHAT_KEEP_ALIVE,
+    base_url=OLLAMA_BASE_URL,
 )
 llm_with_tools = _llm.bind_tools(tools)
 
@@ -64,53 +66,81 @@ def _language_name(code: str | None) -> str:
         return code
 
 
+EARLIER_TITLE_CHARS = 80  # per title in the one-line summary of an earlier search
+
+
+def _current_question(state: State) -> str:
+    """Text of the user's latest real message (judge critiques do not count)."""
+    for message in reversed(state["messages"]):
+        if getattr(message, "type", "") == "human" and not is_critique(message):
+            return _extract_text(message.content).strip()
+    return ""
+
+
+def _earlier_search_lines(state: State, current_ids: set[str]) -> list[str]:
+    """One line per retrieval entry still in the window that belongs to an earlier question."""
+    lines: list[str] = []
+    for retrieval in state.get("retrieval") or []:
+        if retrieval.get("tool_call_id") in current_ids or retrieval.get("retrieval_status") != "FOUND":
+            continue
+        titles = [str(doc.get("title", "Untitled"))[:EARLIER_TITLE_CHARS] for doc in (retrieval.get("retrieval_documents") or []) if doc]
+        lines.append(f"- \"{retrieval.get('retrieval_query', '')}\": " + ("; ".join(dict.fromkeys(titles)) or "(no titles)"))
+    return lines
+
+
 def build_retrieval_context(state: State) -> SystemMessage | None:
-    """Converts the retrieval state into a temporary system message.
+    """Turn this turn's retrieval results into a temporary system message.
+
+    Only documents retrieved for the current question are shown in full. Entries the bounded
+    window still holds from earlier questions appear as one line each (query and titles) under a
+    header saying they are not for this question, so a search about cars never leaks into the next
+    question about food. When this turn made no retrieval there is no context block at all: a
+    question that needs facts triggers a new search, and small talk sees nothing stale.
 
     Documents whose source the judge found unverifiable (page missing or empty) are labelled so
     the chatbot does not present them as fact on a revision.
     """
-    retrievals = state.get("retrieval", [])
-    if not retrievals:
+    current_ids = turn_tool_call_ids(state)
+    current = [r for r in turn_retrievals(state) if r.get("retrieval_status") == "FOUND"]
+    if not current:
         return None
 
     unverified = {normalize_url(u) for u in ((state.get("judge") or {}).get("unverified_sources") or [])}
 
     parts = [
-        "## Retrieved Context",
+        "## Retrieved Context for the current question",
+        f"Question: {_current_question(state)}",
         "",
-        "Use this information as the primary factual context when answering.",
-        "If the retrieved information is sufficient, prefer it over your internal knowledge.",
+        "The documents below were retrieved for this question only. Use them as the factual basis of your answer",
+        "and prefer them over your internal knowledge.",
         "Entries marked UNVERIFIED have a source page that does not exist or is empty: do not state their content as fact.",
         "",
     ]
 
-    for retrieval in retrievals:
-        if retrieval["retrieval_status"] != "FOUND":
-            continue
-
-        query = retrieval.get("retrieval_query", "")
-        parts.append(f"### Retrieval Query")
-        parts.append(query)
+    for retrieval in current:
+        docs = [doc for doc in (retrieval.get("retrieval_documents") or []) if doc]
+        parts.append(f"### Search: {retrieval.get('retrieval_query', '')} ({len(docs)} document{'s' if len(docs) != 1 else ''})")
         parts.append("")
+        for doc in docs:
+            source = str(doc.get("source", ""))
+            flagged = source.startswith("http") and normalize_url(source) in unverified
+            parts.append(f"Source: {source}" + ("  [UNVERIFIED: source page missing or empty]" if flagged else ""))
+            parts.append(f"Title: {doc['title']}")
+            parts.append(f"Stage: {doc['stage']}")
+            parts.append(f"Confidence: {doc['confidence']}")
+            parts.append("")
+            parts.append(doc["content"])
+            parts.append("")
+            parts.append("-" * 40)
+            parts.append("")
 
-
-        for doc in retrieval.get("retrieval_documents", []):
-            if doc is not None:
-                source = str(doc.get("source", ""))
-                flagged = source.startswith("http") and normalize_url(source) in unverified
-                parts.append(f"Source: {source}" + ("  [UNVERIFIED: source page missing or empty]" if flagged else ""))
-                parts.append(f"Title: {doc['title']}")
-                parts.append(f"Stage: {doc['stage']}")
-                parts.append(f"Confidence: {doc['confidence']}")
-                parts.append("")
-                parts.append(doc['content'])
-                parts.append("")
-                parts.append("-" * 40)
-                parts.append("")
-
-    if len(parts) < 1:
-        return None
+    earlier = _earlier_search_lines(state, current_ids)
+    if earlier:
+        parts.append("## Earlier searches (previous questions, not for this one)")
+        parts.append("These belong to earlier questions. Do not use them to answer the current question. "
+                     "If the current question refers back to one of them, search again with a self-contained query.")
+        parts.extend(earlier)
+        parts.append("")
 
     return SystemMessage(content="\n".join(parts))
 

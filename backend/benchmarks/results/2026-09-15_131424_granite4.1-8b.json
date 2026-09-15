@@ -1,0 +1,174 @@
+{
+  "timestamp": "2026-09-15_131424",
+  "chat_model": "granite4.1:8b",
+  "judge_model": "granite4.1:8b",
+  "git_commit": "0642f15",
+  "python": "3.12.0",
+  "results": [
+    {
+      "id": "switch-gpu",
+      "category": "switch",
+      "question": "How much VRAM does the RTX 5090 have?",
+      "thread": "switch",
+      "total_s": 1.86,
+      "node_times_s": {
+        "prepare_turn": 0.16,
+        "chatbot": 1.2,
+        "tools": 0.08,
+        "judge": 0.42,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 2,
+        "tools": 1,
+        "judge": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "tools",
+        "chatbot",
+        "judge",
+        "finalize"
+      ],
+      "tools_used": [
+        "retrieve_information"
+      ],
+      "retrieval_stage": 1,
+      "retrieval_docs": 1,
+      "judge": {
+        "passed": true,
+        "grounded": true,
+        "needs_more_info": false,
+        "issues": [],
+        "error": null
+      },
+      "judge_attempts": 0,
+      "verdicts": [
+        {
+          "passed": true,
+          "grounded": true,
+          "needs_more_info": false,
+          "issues": [],
+          "error": null
+        }
+      ],
+      "user_language": "English",
+      "reply_text": "The NVIDIA GeForce RTX 5090 features 32 GB of GDDR7 VRAM.\n(Source: curated GPU knowledge base – specifications section)\nAnswer: 32 GB.\n\nNote: This information is verified from the provided GPU knowledge source.\nnyas: That's a lot of memory for cutting‑edge gaming and AI workloads!",
+      "reply_html": "<p>The NVIDIA GeForce RTX 5090 features <strong>32 GB of GDDR7 VRAM</strong>.</p>\n<p><em>(Source: curated GPU knowledge base – specifications section)</em></p>\n<p><strong>Answer:</strong> <strong>32 GB</strong>.</p>\n<hr>\n<p><strong>Note:</strong> This information is verified from the provided GPU knowledge source.</p>\n<p><strong><em>nyas</em>:</strong> That's a lot of memory for cutting‑edge gaming and AI workloads!</p>",
+      "error": null
+    },
+    {
+      "id": "switch-food",
+      "category": "switch",
+      "question": "What are the main ingredients of a Colombian ajiaco?",
+      "thread": "switch",
+      "total_s": 9.92,
+      "node_times_s": {
+        "prepare_turn": 0.0,
+        "chatbot": 5.07,
+        "tools": 4.03,
+        "judge": 0.82,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 2,
+        "tools": 1,
+        "judge": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "tools",
+        "chatbot",
+        "judge",
+        "finalize"
+      ],
+      "tools_used": [
+        "retrieve_information"
+      ],
+      "retrieval_stage": 2,
+      "retrieval_docs": 5,
+      "judge": {
+        "passed": true,
+        "grounded": true,
+        "needs_more_info": false,
+        "issues": [],
+        "error": null
+      },
+      "judge_attempts": 0,
+      "verdicts": [
+        {
+          "passed": true,
+          "grounded": true,
+          "needs_more_info": false,
+          "issues": [],
+          "error": null
+        }
+      ],
+      "user_language": "English",
+      "reply_text": "Main ingredients of a Colombian Ajiaco (Bogotano)\n\n\n\nCategory\nIngredients (typical)\n\n\n\n\nProtein\n• 1 whole chicken (or 4 bone‑in chicken breasts/thighs)\n\n\nPotatoes\n• 3 kinds of potatoes:  – 1 lb (≈ 450 g) papa criolla (yellow/Andean potatoes)  – 1 lb (≈ 450 g) papa sabanera (red potatoes)  – 1 lb (≈ 450 g) papa pastosa (white or russet potatoes)\n\n\nVegetables &amp; Corn\n• 3 ears of fresh corn, cut into 3‑inch pieces • 1 medium onion, chopped • 3–4 garlic cloves, minced\n\n\nHerb\n• Guascas (dried herb, essential for the distinctive flavor)\n\n\nSpices &amp; Seasoning\n• Salt • Bay leaves (2–3) • Cumin (optional, for extra depth)\n\n\nLiquid Base\n• Chicken broth or water (≈ 10 cups / 2.4 L)\n\n\nGarnishes (served with)\n• Capers (drained) • Sliced avocado • Sour cream or crema • Fresh cilantro or parsley • White rice (often served on the side)\n\n\n\nBrief preparation note:\n\nSimmer the chicken in broth with potatoes, corn, onion, garlic, guascas, bay leaves, and salt until the meat is tender.\nAdd the potatoes gradually so they thicken the soup naturally.\nRemove the chicken, shred the meat, and return it to the pot.\nServe hot with the garnishes (capers, avocado, sour cream) and a side of rice.\n\nThese ingredients are consistently highlighted across multiple authentic Colombian recipe sources (e.g., My Colombian Recipes, Que Are Pas, My Planet Food, Immigrant Stable, Colombian Recipes).\nnyas: That hearty mix makes ajiaco the perfect comfort food for cool Andean days!",
+      "reply_html": "<p><strong>Main ingredients of a Colombian Ajiaco (Bogotano)</strong></p>\n<table>\n<thead>\n<tr>\n<th>Category</th>\n<th>Ingredients (typical)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><strong>Protein</strong></td>\n<td>• 1 whole chicken (or 4 bone‑in chicken breasts/thighs)</td>\n</tr>\n<tr>\n<td><strong>Potatoes</strong></td>\n<td>• 3 kinds of potatoes: <br> – 1 lb (≈ 450 g) <strong>papa criolla</strong> (yellow/Andean potatoes) <br> – 1 lb (≈ 450 g) <strong>papa sabanera</strong> (red potatoes) <br> – 1 lb (≈ 450 g) <strong>papa pastosa</strong> (white or russet potatoes)</td>\n</tr>\n<tr>\n<td><strong>Vegetables &amp; Corn</strong></td>\n<td>• 3 ears of fresh corn, cut into 3‑inch pieces <br>• 1 medium onion, chopped <br>• 3–4 garlic cloves, minced</td>\n</tr>\n<tr>\n<td><strong>Herb</strong></td>\n<td>• <strong>Guascas</strong> (dried herb, essential for the distinctive flavor)</td>\n</tr>\n<tr>\n<td><strong>Spices &amp; Seasoning</strong></td>\n<td>• Salt <br>• Bay leaves (2–3) <br>• Cumin (optional, for extra depth)</td>\n</tr>\n<tr>\n<td><strong>Liquid Base</strong></td>\n<td>• Chicken broth or water (≈ 10 cups / 2.4 L)</td>\n</tr>\n<tr>\n<td><strong>Garnishes (served with)</strong></td>\n<td>• Capers (drained) <br>• Sliced avocado <br>• Sour cream or crema <br>• Fresh cilantro or parsley <br>• White rice (often served on the side)</td>\n</tr>\n</tbody>\n</table>\n<p><strong>Brief preparation note:</strong></p>\n<ol>\n<li>Simmer the chicken in broth with potatoes, corn, onion, garlic, guascas, bay leaves, and salt until the meat is tender.</li>\n<li>Add the potatoes gradually so they thicken the soup naturally.</li>\n<li>Remove the chicken, shred the meat, and return it to the pot.</li>\n<li>Serve hot with the garnishes (capers, avocado, sour cream) and a side of rice.</li>\n</ol>\n<p>These ingredients are consistently highlighted across multiple authentic Colombian recipe sources (e.g., My Colombian Recipes, Que Are Pas, My Planet Food, Immigrant Stable, Colombian Recipes).</p>\n<p><strong><em>nyas</em>:</strong> That hearty mix makes ajiaco the perfect comfort food for cool Andean days!</p>",
+      "error": null
+    },
+    {
+      "id": "switch-back",
+      "category": "switch",
+      "question": "And how much power does that graphics card draw?",
+      "thread": "switch",
+      "total_s": 2.69,
+      "node_times_s": {
+        "prepare_turn": 0.0,
+        "chatbot": 1.89,
+        "tools": 0.01,
+        "judge": 0.78,
+        "finalize": 0.0
+      },
+      "node_visits": {
+        "prepare_turn": 1,
+        "chatbot": 2,
+        "tools": 1,
+        "judge": 1,
+        "finalize": 1
+      },
+      "path": [
+        "prepare_turn",
+        "chatbot",
+        "tools",
+        "chatbot",
+        "judge",
+        "finalize"
+      ],
+      "tools_used": [
+        "retrieve_information"
+      ],
+      "retrieval_stage": 1,
+      "retrieval_docs": 2,
+      "judge": {
+        "passed": true,
+        "grounded": true,
+        "needs_more_info": false,
+        "issues": [],
+        "error": null
+      },
+      "judge_attempts": 0,
+      "verdicts": [
+        {
+          "passed": true,
+          "grounded": true,
+          "needs_more_info": false,
+          "issues": [],
+          "error": null
+        }
+      ],
+      "user_language": "English",
+      "reply_text": "The NVIDIA GeForce RTX 5090 has a TDP (Thermal Design Power) of 575 W. This rating indicates the maximum power the GPU is designed to consume under typical load conditions.\nAnswer: 575 W\n(Source: curated GPU knowledge base – specifications section)\nnyas: That’s a hefty draw, perfect for pushing 8K gaming and heavy AI workloads!",
+      "reply_html": "<p>The NVIDIA GeForce RTX 5090 has a <strong>TDP (Thermal Design Power) of 575 W</strong>. This rating indicates the maximum power the GPU is designed to consume under typical load conditions.</p>\n<p><strong>Answer:</strong> <strong>575 W</strong></p>\n<p><em>(Source: curated GPU knowledge base – specifications section)</em></p>\n<p><strong><em>nyas</em>:</strong> That’s a hefty draw, perfect for pushing 8K gaming and heavy AI workloads!</p>",
+      "error": null
+    }
+  ]
+}

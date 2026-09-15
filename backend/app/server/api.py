@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 
+from ..config import CORS_ORIGINS
 from ..graph.core.graph import run_agent, stream_agent_events
 from ..db.chroma_store import load_vectorstore
 from ..server.schemas import ChatRequest, ChatResponse
@@ -67,7 +68,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Agentic LangGraph API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

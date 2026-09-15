@@ -36,7 +36,15 @@ python -m unittest discover tests   # unit tests (no Ollama needed)
 python -m benchmarks.run_benchmark  # fixed question set with per-node timings (needs Ollama)
 ```
 
-## 4) Graph
+## 4) Docker
+
+`Dockerfile` builds a python:3.12-slim image from `uv.lock` (no dev group) and runs uvicorn on port
+8000. `docker-entrypoint.sh` rebuilds the Chroma collections into `CHROMA_DIR` on first start (or when
+`REBUILD_ON_START=1`) and writes a `.ready` marker. Ollama stays on the host: `OLLAMA_BASE_URL` is set
+to `http://host.docker.internal:11434` by the root `docker-compose.yml`. Run the stack from the repo
+root with `docker compose up --build`; see the root README and `docker_journal.md`.
+
+## 5) Graph
 
 ```
 START -> prepare_turn -> chatbot --tool calls--> tools --> chatbot
